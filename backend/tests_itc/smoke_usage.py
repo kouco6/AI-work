@@ -37,8 +37,8 @@ def main() -> int:
     names = sorted(t for t in SQLModel.metadata.tables if t.startswith("itc_"))
     print("1) itc 表:", names)
     expected = {
-        "itc_usage_records", "itc_quota_policies", "itc_quota_counters", "itc_audit_logs",
-        "itc_sensitive_words", "itc_roles", "itc_permissions", "itc_role_bindings", "itc_model_prices",
+        "itc_usage_records", "itc_audit_logs", "itc_model_prices",
+        "itc_roles", "itc_permissions", "itc_role_bindings",
     }
     missing = expected - set(names)
     assert not missing, f"缺少 itc 表: {missing}"

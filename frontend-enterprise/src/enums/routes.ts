@@ -11,8 +11,6 @@ export enum EnterpriseRoute {
   TaskManagement = '/enterprise/task-management',
   /** itc 输出物管理（FR-211~216，二次开发新增） */
   Outputs = '/enterprise/outputs',
-  /** itc 配额与限流（FR-156，二次开发新增） */
-  Quota = '/enterprise/quota',
   /** itc 数据源管理（FR-178~182，二次开发新增） */
   DataSources = '/enterprise/data-sources',
   /** itc 组织架构 / 三层组织 + 军师池（FR-148，二次开发新增） */

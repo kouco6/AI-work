@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, JSON, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, JSON, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -38,37 +38,6 @@ class UsageRecord(SQLModel, table=True):
     source_type: Optional[str] = Field(default=None, max_length=32)  # 对话/定时/任务台/手动
     span_id: Optional[str] = Field(default=None, max_length=64)
     created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
-
-
-class QuotaPolicy(SQLModel, table=True):
-    """配额策略（FR-156）。scope_type ∈ {user, agent, dept, platform}。"""
-
-    __tablename__ = "itc_quota_policies"
-    __table_args__ = (
-        UniqueConstraint("scope_type", "scope_id", "metric", "period", name="uq_quota_scope"),
-    )
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    scope_type: str = Field(max_length=16)
-    scope_id: str = Field(max_length=64)
-    metric: str = Field(max_length=16)  # calls / tokens
-    period: str = Field(max_length=16)  # day / month
-    limit_value: int
-    concurrent_limit: Optional[int] = None
-    created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
-
-
-class QuotaCounter(SQLModel, table=True):
-    """配额计数（原子窗口；PG INSERT ... ON CONFLICT 自增）。"""
-
-    __tablename__ = "itc_quota_counters"
-
-    scope_type: str = Field(primary_key=True, max_length=16)
-    scope_id: str = Field(primary_key=True, max_length=64)
-    metric: str = Field(primary_key=True, max_length=16)
-    # 复合主键的一部分，需写在 sa_column 内（SQLModel 不允许 primary_key + sa_column 同用）
-    window_start: datetime = Field(sa_column=Column(DateTime(timezone=True), primary_key=True))
-    used: int = Field(default=0)
 
 
 class ModelPrice(SQLModel, table=True):
@@ -162,17 +131,6 @@ class SharedMemory(SQLModel, table=True):
     metadata_json: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
-
-
-class SensitiveWord(SQLModel, table=True):
-    """敏感词表（FR-234）。"""
-
-    __tablename__ = "itc_sensitive_words"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    word: str = Field(sa_column=Column(Text, index=True))
-    category: Optional[str] = Field(default=None, max_length=32)
-    enabled: bool = True
 
 
 class Role(SQLModel, table=True):

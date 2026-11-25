@@ -22,17 +22,21 @@ backend/src/
   itc_modules/          # 挂到 StaffDeck ModuleRegistry 的模块
     usage_meter.py      #   用量计量 observer（FR-151/152）
     audit_observer.py   #   审计留存 observer（FR-224）
-    content_safety.py   #   内容安全 hook（FR-234）
-    quota_gate.py       #   配额判定（FR-156，被 turn_coordinator 调用）
+    memory_shared.py    #   共享记忆 L1/L2 provider（FR-201/202）
   itc_platform/         # 业务库（表模型 / 存储）
     db.py               #   复用 app.db.engine，只建 itc_ 表
     models.py           #   itc_* 新表（SQLModel，由 Alembic 管）
-    usage/ quota/ audit/
+    usage/ cost/ kpi/ audit/ memory/ tasks/ datasource/
   tests_itc/            # itc 独立自测（轻量 venv 即可跑，不依赖 StaffDeck 全环境）
     smoke_usage.py      #   建表 + 落库 + 字段原样
     smoke_observer.py   #   observer 注册进 registry + 事件落库
 backend/env.itc.template # 装配模板（复制为 .env）
 ```
+
+> **已移除的需求**（本轮）：**配额与限流（FR-156）**、**巡检监控（FR-221~225）**、
+> **内容安全（FR-234）** —— 三项 not in scope，相关 itc 代码（`itc_platform/quota`·
+> `itc_platform/safety`·`itc_modules/quota_gate`·`itc_modules/content_safety`·`QuotaPage`·
+> `QuotaBarChart` + 对应表/端点/测试）已删除。原生功能（聊天流心跳、流程图检查器等）不受影响。
 
 > `launch.py:7` 已把 `backend/` 与 `backend/src/` 注入 `sys.path`；`backend/pyproject.toml` 的
 > `packages.find.include` 也已补 `itc_modules*` / `itc_platform*`（双保险）。
@@ -58,7 +62,6 @@ python -m venv .venv-itc
 ./.venv-itc/Scripts/python.exe tests_itc/smoke_usage.py       # 建表 + 落库 + 字段原样
 ./.venv-itc/Scripts/python.exe tests_itc/smoke_observer.py    # observer 注册 + 事件落库
 ./.venv-itc/Scripts/python.exe tests_itc/smoke_audit.py       # 审计落库 + 脱敏 + 180 天留存
-./.venv-itc/Scripts/python.exe tests_itc/smoke_safety.py      # 内容安全：词表/递归扫描/输入输出拦截
 ./.venv-itc/Scripts/python.exe tests_itc/smoke_cost.py        # 成本/KPI：明细计费 + 多维聚合
 ./.venv-itc/Scripts/python.exe tests_itc/smoke_discovery.py   # 真实装配路径（discover_and_install）
 ```
@@ -75,7 +78,6 @@ python -m venv .venv-itc
 | `event.observer` 槽 | ✅ `observer.trace / observer.feedback / ledger.invocation / usage.meter / audit.observer` —— **追加并存，未顶掉原生** |
 | 反向：不配 `harness_modules` | ✅ 共 **57** 个模块，**无 itc 模块** |
 | **审计落库 + 脱敏 + 180 天留存**（`smoke_audit`） | ✅ `api_key/token` → `[redacted]`；删 200 天前、留近期 |
-| **内容安全拦截**（`smoke_safety`） | ✅ 递归扫 payload；敏感 → `deny`，干净 → `pass` |
 | **成本/KPI**（`smoke_cost`） | ✅ 明细计费准确；未计量单列；按模型/员工/用户聚合 |
 | 共享 `BatchWriter`（usage/audit 复用） | ✅ 非阻塞入队 + 后台批量 flush |
 
@@ -96,7 +98,6 @@ python -m venv .venv-itc
 
 | # | 文件 | 改动 | 对应 FR |
 |---|------|------|---------|
-| 1 | `backend/app/core/turn_coordinator.py:287-294` | `run()` 内 `accept()` 后插 1 行 `check_quota(...)` | FR-156 |
 | 2 | `backend/src/staffdeck_harness/security/profile.py:64-85` | 加 `itc_rbac` 分支 | FR-232/266 |
 | 3 | `backend/app/api/auth.py` | 新增 `/api/auth/oidc/callback`（老逻辑零改） | FR-262 |
 | 4 | `backend/app/db/database.py:22-24` | PG 连接池参数（补 `pool_size` 等） | D-11 |
@@ -107,11 +108,11 @@ python -m venv .venv-itc
 
 | 文件 | 改动 | 行数 |
 |------|------|------|
-| `backend/app/main.py` | `include_router(itc_platform.api.router)` — 挂 itc 成本/KPI/配额/数据源/记忆 API | **+2 行** |
+| `backend/app/main.py` | `include_router(itc_platform.api.router)` — 挂 itc 成本/KPI/数据源/记忆/任务 API | **+2 行** |
 | `backend/src/staffdeck_harness/bridge/engine_host.py:196` | v3 trace 的 `EventLog` 接 `event_sink=fanout_event(...)` —— 让引擎事件 fanout 给 observer（原生此处未接，导致 `llm_call_finished` 不达 observer） | **+7 行** |
 | `frontend-enterprise/src/App.tsx` | 路由块 259 行 → 5 行（配置化） | 净减 254 行 |
 
-> 其余 itc 功能（计量/审计/内容安全/成本服务/看板页）**均不改上游源码**——
+> 其余 itc 功能（计量/审计/成本服务/看板页）**均不改上游源码**——
 > 后端走 ModuleRegistry 外部模块 + 独立 `itc_platform` 包，前端走新增文件 + 路由配置表。
 
 ## itc 平台 API（`/api/enterprise/itc/*`）
@@ -127,7 +128,6 @@ python -m venv .venv-itc
 | `GET /cost/by-user` | 按用户排行 | FR-154 |
 | `GET /kpi/agents` | AI 员工 KPI（含未计量占比） | FR-153 |
 | `GET /model-prices` | 模型单价表 | FR-152 |
-| `GET /quota/policies` | 配额策略 | FR-156 |
 | `GET/POST/DELETE /memory/shared` | 共享记忆 L1/L2（仅管理员写） | FR-201/202 |
 | `POST /tasks` | 发布任务（按复杂度自动分配） | FR-196 |
 | `GET /tasks` · `GET /tasks/strategist-pool` | 任务列表 · 军师池（D-17 择优依据） | FR-196/197 |
@@ -163,14 +163,13 @@ capture/list/clear 一律透传原生；卸载该模块即完全退回原生行�
 ```
 src/hooks/useApi.ts                 # 数据请求 hook（复用 api/client.ts 的 api.get，防竞态/可轮询）
 src/components/charts/              # 图表层（recharts，颜色吃 styles.css 变量）
-  chartTheme.ts  UsageLineChart.tsx  QuotaBarChart.tsx  index.ts
+  chartTheme.ts  UsageLineChart.tsx  index.ts
 src/routes/config.tsx               # 企业台路由表（从 App.tsx 抽出）
 src/pages/WorkbenchHomePage.tsx     # 工作台首页（FR-101~108，二次开发整页新增）
 src/pages/CostDashboardPage.tsx     # 成本与 KPI 看板（FR-151~155）
 src/pages/TaskConsolePage.tsx       # 任务台（FR-196 / D-16 / D-17）
 src/pages/TaskManagementPage.tsx    # 任务管理（FR-197）
 src/pages/OutputsPage.tsx           # 输出物管理（FR-211~216）
-src/pages/QuotaPage.tsx             # 配额与限流（FR-156）
 src/pages/DataSourcePage.tsx        # 数据源管理（FR-178~182）
 src/pages/OrgChartPage.tsx          # 组织架构 / 三层组织 + 军师池（FR-148）
 src/pages/SharedMemoryPage.tsx      # 共享记忆 L1/L2（FR-201/202）
@@ -210,10 +209,9 @@ src/assets/icons/nav-*.svg          # 侧栏图标（home/cost/task/outputs/quot
 > 运行设置；管理后台按原生规则隐藏）。
 >
 > ⚠️ **孤立文件**（本轮去除管理后台后无入口，保留备用）：`CostDashboardPage.tsx`（成本/KPI 后端已就绪）、
-> `QuotaPage.tsx`（配额后端已就绪）——待确定落点。
 >
 > 新增页面统一照抄 `ModelsPage` 的「`AppHeader` + `StatCard` + `DataTable` + `Dialog` + `UnderlineTabs`」骨架，
-> 复用 `useApi` / `DataTable` / `StatCard` / `QuotaBarChart`，**不新造设计**。
+> 复用 `useApi` / `DataTable` / `StatCard` / `UsageLineChart`，**不新造设计**。
 > 后端未提供的端点一律**乐观空态**（「暂无数据…功能接入后在此展示」+ 独立「点击重试」），不整页崩溃。
 > **FR-147**（平台模型「⚡获取列表」）为 `ModelsPage` 弹窗内**原生页扩展**，配套后端 `POST /api/enterprise/itc/models/list`。
 

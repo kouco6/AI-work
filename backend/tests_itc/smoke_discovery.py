@@ -41,8 +41,7 @@ class _Settings:
     # ↓ 本次要害：装作 .env 里配了 our modules（等价 STAFFDECK_HARNESS_MODULES）
     harness_modules = (
         "itc_modules.usage_meter:register,"
-        "itc_modules.audit_observer:register,"
-        "itc_modules.content_safety:register"
+        "itc_modules.audit_observer:register"
     )
     harness_v3_root = ""
     harness_v3_home = ""
@@ -71,7 +70,6 @@ def main() -> int:
     expected = {
         "usage.meter": SlotName.EVENT_OBSERVER,
         "audit.observer": SlotName.EVENT_OBSERVER,
-        "content.safety": SlotName.STAFF_INTERACTION,
     }
     for mid, slot in expected.items():
         assert mid in by_id, f"缺少模块 {mid}"
@@ -85,7 +83,7 @@ def main() -> int:
     # 原生 observer 仍在（我们追加而非替换）
     assert "observer.trace" in observers, "原生 observer.trace 被顶掉——不应发生"
 
-    print("\n✅ 真实装配路径通过：discover_and_install 按 harness_modules 装入了 3 个 itc 模块，"
+    print("\n✅ 真实装配路径通过：discover_and_install 按 harness_modules 装入了 itc 模块，"
           "且与原生 observer 并存")
     return 0
 

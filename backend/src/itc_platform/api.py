@@ -1,8 +1,8 @@
-"""itc 成本 / KPI / 配额查询 API（FR-145/151/152/153/154/155/156）。
+"""itc 成本 / KPI / 记忆 / 任务 / 数据源 API（FR-145/151/152/153/154/155/156）。
 
 挂载：``app/main.py`` 中 ``app.include_router(itc_platform...)`` 一行。
 鉴权：复用 StaffDeck 的 ``require_current_tenant``（JWT），与既有企业路由一致。
-数据：读 ``itc_usage_records`` / ``itc_quota_*``（由 observer 落库）。
+数据：读 ``itc_usage_records``（由 observer 落库）。
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from app.security.auth import require_current_tenant
 from itc_platform.cost import service as cost_service
 from itc_platform.db import itc_tables
 from itc_platform.kpi import service as kpi_service
-from itc_platform.models import ModelPrice, QuotaPolicy
+from itc_platform.models import ModelPrice
 
 router = APIRouter(prefix="/api/enterprise/itc", tags=["enterprise:itc"])
 
@@ -131,30 +131,6 @@ def list_model_prices(
             "input_per_million": r.input_per_million,
             "output_per_million": r.output_per_million,
             "cached_input_per_million": r.cached_input_per_million,
-        }
-        for r in rows
-    ]
-
-
-@router.get("/quota/policies")
-def list_quota_policies(
-    tenant_id: str = Query(...),
-    current_user: User = Depends(require_current_tenant),
-) -> list[dict]:
-    """配额策略（FR-156）。"""
-    _ensure_itc_schema()
-    from itc_platform.db import get_engine
-
-    with Session(get_engine()) as session:
-        rows = session.exec(select(QuotaPolicy)).all()
-    return [
-        {
-            "scope_type": r.scope_type,
-            "scope_id": r.scope_id,
-            "metric": r.metric,
-            "period": r.period,
-            "limit_value": r.limit_value,
-            "concurrent_limit": r.concurrent_limit,
         }
         for r in rows
     ]
