@@ -190,3 +190,36 @@ class ItcTask(SQLModel, table=True):
     token_used: int = Field(default=0)
     created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
+
+
+class ItcArtifact(SQLModel, table=True):
+    """平台产出物库（FR-211~216）。
+
+    **D-10**：产出物统一存平台存储（不做公司文件服务器对接），权限用平台 RBAC——
+    默认仅**产出者本人**可见，可分享给用户/部门/全员（``visibility``）。
+    元数据（FR-213）：产出 AI / 触发方式 / 版本 / 来源。
+    版本（FR-214）：重新生成加版本号，不覆盖原文件。归档（FR-215）：日报 3 个月 / 周月报永久。
+    """
+
+    __tablename__ = "itc_artifacts"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: str = Field(index=True, max_length=64)
+    name: str = Field(max_length=300)
+    file_type: str = Field(default="", max_length=32)  # PPT / Excel / Word / PDF / 图片
+    agent_id: Optional[str] = Field(default=None, index=True, max_length=64)
+    agent_name: str = Field(default="", max_length=128)
+    produced_by: Optional[str] = Field(default=None, index=True, max_length=64)  # 产出者 user_id
+    source: str = Field(default="对话", max_length=32)  # 对话 / 定时 / 任务台
+    task_id: Optional[str] = Field(default=None, index=True, max_length=64)
+    session_id: Optional[str] = Field(default=None, max_length=64)
+    version: int = Field(default=1)
+    parent_id: Optional[int] = Field(default=None)  # 上一版本 id
+    size: int = Field(default=0)
+    storage_path: str = Field(default="", max_length=512)  # 平台存储相对路径（年/月/类型）
+    source_url: str = Field(default="", max_length=512)  # 数据来源链接（FR-213）
+    visibility: str = Field(default="private", max_length=16)  # private/user/dept/all（FR-212）
+    shared_with: Optional[list] = Field(default=None, sa_column=Column(JSON))  # 分享对象 id
+    archived: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))

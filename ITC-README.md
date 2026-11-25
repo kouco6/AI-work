@@ -126,13 +126,14 @@ python -m venv .venv-itc
 | `GET /cost/by-model` | 按模型 | FR-145 |
 | `GET /cost/by-agent` | 按 AI 员工 | FR-152 |
 | `GET /cost/by-user` | 按用户排行 | FR-154 |
-| `GET /kpi/agents` | AI 员工 KPI（含未计量占比） | FR-153 |
+| `GET /kpi/agents` | AI 员工 KPI：用量 + **准确率/满意度**（原生 message_feedback）+ **响应时长**（原生 harness_runs）+ **S/A/B/C/D 等级** | FR-128/130/153 |
 | `GET /model-prices` | 模型单价表 | FR-152 |
 | `GET/POST/DELETE /memory/shared` | 共享记忆 L1/L2（仅管理员写） | FR-201/202 |
 | `POST /tasks` | 发布任务（按复杂度自动分配） | FR-196 |
 | `GET /tasks` · `GET /tasks/strategist-pool` | 任务列表 · 军师池（D-17 择优依据） | FR-196/197 |
 | `POST /tasks/{id}/claim · assign · recall · status` | 认领 / 改派 / 收回 / 改状态 | FR-196 |
 | `POST /tasks/{id}/execute` | **触发执行**（异步；入队 `enqueue_runtime_job`，立即返回 `{queued:true}`） | FR-196 |
+| `GET/POST /outputs` · `/outputs/{id}/share·archive` · `DELETE` | 产出物库（D-10 存平台 + 平台 RBAC + 版本 + 归档 + 分享） | FR-211~216 |
 
 > **派活→执行闭环已通**（**异步 + 自动触发**，实测）：
 > 发布任务 → 协调型分给军师 / 执行型被认领 → **认领/分配即自动异步执行**（不阻塞 HTTP）→
@@ -173,6 +174,7 @@ src/pages/OutputsPage.tsx           # 输出物管理（FR-211~216）
 src/pages/DataSourcePage.tsx        # 数据源管理（FR-178~182）
 src/pages/OrgChartPage.tsx          # 组织架构 / 三层组织 + 军师池（FR-148）
 src/pages/SharedMemoryPage.tsx      # 共享记忆 L1/L2（FR-201/202）
+src/pages/KpiDashboardPage.tsx      # 绩效考核 / KPI（FR-128/130/132）
 src/lib/orgLevels.ts                # 组织层级选项（FR-122/D-16，新建+编辑共用）
 src/assets/icons/nav-*.svg          # 侧栏图标（home/cost/task/outputs/quota/datasource/org/shared-memory）
 ```

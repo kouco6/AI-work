@@ -292,6 +292,98 @@ def execute_task(
     return tasks.execute_task(tenant_id=tenant_id, task_id=task_id)
 
 
+# ── 产出物管理（FR-211~216，D-10 存平台 + 平台 RBAC）────────────
+
+@router.get("/outputs")
+def list_outputs(
+    tenant_id: str = Query(...),
+    view: str = Query("mine"),
+    agent_id: Optional[str] = Query(None),
+    q: str = Query(""),
+    current_user: User = Depends(require_current_tenant),
+) -> list[dict]:
+    """列出产出物（视图 + RBAC 过滤）。"""
+    from app.security.permissions import is_admin_user
+
+    from itc_platform.artifacts import service as arts
+
+    return arts.list_artifacts(
+        tenant_id, user_id=current_user.id, is_admin=is_admin_user(current_user),
+        view=view, agent_id=agent_id, query=q,
+    )
+
+
+@router.post("/outputs")
+def register_output(
+    body: dict = Body(...),
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """登记一份产出物（产出 AI 写回，或手动补录）。"""
+    from itc_platform.artifacts import service as arts
+
+    aid = arts.register_artifact(
+        tenant_id=tenant_id,
+        name=str(body.get("name") or "").strip(),
+        produced_by=current_user.id,
+        file_type=str(body.get("file_type") or ""),
+        agent_id=body.get("agent_id"),
+        agent_name=str(body.get("agent_name") or ""),
+        source=str(body.get("source") or "对话"),
+        task_id=body.get("task_id"),
+        session_id=body.get("session_id"),
+        size=int(body.get("size") or 0),
+        storage_path=str(body.get("storage_path") or ""),
+        source_url=str(body.get("source_url") or ""),
+        parent_id=body.get("parent_id"),
+    )
+    return {"id": aid}
+
+
+@router.post("/outputs/{artifact_id}/share")
+def share_output(
+    artifact_id: int,
+    body: dict = Body(...),
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """改分享范围（FR-212）。"""
+    from itc_platform.artifacts import service as arts
+
+    return {"updated": arts.share_artifact(
+        tenant_id=tenant_id, artifact_id=artifact_id,
+        visibility=str(body.get("visibility") or "private"),
+        shared_with=body.get("shared_with") if isinstance(body.get("shared_with"), list) else None,
+    )}
+
+
+@router.post("/outputs/{artifact_id}/archive")
+def archive_output(
+    artifact_id: int,
+    body: dict = Body(default={}),
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """归档 / 取消归档（FR-215）。"""
+    from itc_platform.artifacts import service as arts
+
+    return {"updated": arts.archive_artifact(
+        tenant_id=tenant_id, artifact_id=artifact_id, archived=bool(body.get("archived", True)),
+    )}
+
+
+@router.delete("/outputs/{artifact_id}")
+def delete_output(
+    artifact_id: int,
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """删除产出物记录。"""
+    from itc_platform.artifacts import service as arts
+
+    return {"deleted": arts.delete_artifact(tenant_id=tenant_id, artifact_id=artifact_id)}
+
+
 # ── 数据源管理（FR-178~182）──────────────────────────────────
 
 def _require_admin(current_user: User) -> None:

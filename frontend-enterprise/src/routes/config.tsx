@@ -49,6 +49,7 @@ import TaskManagementPage from '../pages/TaskManagementPage';
 import OutputsPage from '../pages/OutputsPage';
 import OrgChartPage from '../pages/OrgChartPage';
 import SharedMemoryPage from '../pages/SharedMemoryPage';
+import KpiDashboardPage from '../pages/KpiDashboardPage';
 
 export type AppRouteCtx = {
   auth: EnterpriseAuthSession;
@@ -96,6 +97,11 @@ export function buildAppRoutes({
     {
       path: '/enterprise/org',
       element: <OrgChartPage isAdmin={isAdmin} onLogout={onLogout} />,
+    },
+    // itc 绩效考核 / KPI（FR-128/130/132，二次开发整页新增）
+    {
+      path: '/enterprise/kpi',
+      element: <KpiDashboardPage isAdmin={isAdmin} onLogout={onLogout} />,
     },
     // itc 共享记忆 L1/L2（FR-201/202，二次开发整页新增；原型中折进「记忆」，此处保留 URL 可达）
     {

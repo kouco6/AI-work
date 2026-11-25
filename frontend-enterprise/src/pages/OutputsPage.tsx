@@ -23,6 +23,8 @@ export type OutputItem = {
   version: string;
   size: number;
   source: string; // 触发方式：定时 / 对话 / 任务台
+  archived?: boolean;
+  visibility?: string;
 };
 
 type ViewKey = 'mine' | 'platform' | 'by-agent' | 'versions';
@@ -35,6 +37,14 @@ const VIEWS: UnderlineTabItem<ViewKey>[] = [
 ];
 
 const Q = `tenant_id=${TENANT_ID}`;
+
+/** 可见范围（FR-212）。 */
+const VIS_LABEL: Record<string, string> = {
+  private: '仅本人',
+  user: '指定用户',
+  dept: '本部门',
+  all: '全员',
+};
 
 const COLUMNS: DataTableColumn<OutputItem>[] = [
   { key: 'name', title: '文件', width: 280, render: (r) => <span className="text-[#18181a]">{r.name}</span> },
@@ -62,6 +72,11 @@ export default function OutputsPage({ onLogout }: OutputsPageProps) {
   const [selected, setSelected] = useState<OutputItem | null>(null);
   const outputs = useApi<OutputItem[]>(`/api/enterprise/itc/outputs?${Q}&view=${view}`);
   const rows = outputs.data ?? [];
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthCount = rows.filter((r) => (r.createdAt || '').startsWith(ym)).length;
+  const totalSize = rows.reduce((s, r) => s + (r.size || 0), 0);
+  const archivedCount = rows.filter((r) => r.archived).length;
 
   return (
     <div className="min-h-full box-border px-[48px] pt-[32px] pb-[43px] max-[900px]:px-[16px]">
@@ -69,9 +84,12 @@ export default function OutputsPage({ onLogout }: OutputsPageProps) {
 
       <div className="mt-[20px] flex flex-wrap gap-[16px]">
         <StatCard value={outputs.loading ? '—' : rows.length} label="本视图文件数" />
-        <StatCard value="—" label="本月产出" />
-        <StatCard value="—" label="占用空间" />
-        <StatCard value="—" label="已归档" />
+        <StatCard value={outputs.loading ? '—' : monthCount} label="本月产出" />
+        <StatCard
+          value={outputs.loading ? '—' : totalSize >= 1024 * 1024 ? `${(totalSize / 1024 / 1024).toFixed(1)} MB` : `${(totalSize / 1024).toFixed(0)} KB`}
+          label="占用空间"
+        />
+        <StatCard value={outputs.loading ? '—' : archivedCount} label="已归档" />
       </div>
 
       <div className="mt-[20px]">
@@ -99,6 +117,7 @@ export default function OutputsPage({ onLogout }: OutputsPageProps) {
               <MetaRow k="生成时间" v={selected.createdAt} />
               <MetaRow k="触发方式" v={selected.source} />
               <MetaRow k="版本" v={selected.version} />
+              <MetaRow k="可见范围" v={VIS_LABEL[selected.visibility || 'private']} />
             </dl>
           ) : (
             <div className="mt-[10px] text-[12px] text-[#757f9c]">选择一份文件查看元数据。</div>

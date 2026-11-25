@@ -31,6 +31,7 @@ import type { AgentProfileRead, ChatSession, TeamRead } from '../types';
 import IconPlatform from '../assets/icons/nav-platform.svg?react';
 import IconHome from '../assets/icons/nav-home.svg?react';
 import IconTask from '../assets/icons/nav-task.svg?react';
+import IconKpi from '../assets/icons/nav-kpi.svg?react';
 import IconOutputs from '../assets/icons/nav-outputs.svg?react';
 import IconAgents from '../assets/icons/nav-agents.svg?react';
 import IconTeams from '../assets/icons/nav-teams.svg?react';
@@ -100,6 +101,8 @@ const CAPABILITY_NAV: NavItem[] = [
 const SYSTEM_NAV: NavItem[] = [
   { route: EnterpriseRoute.Accounts, label: '账号管理', Icon: IconAccounts },
   { route: EnterpriseRoute.Models, label: '模型配置', Icon: IconModels },
+  // itc 二次开发：绩效考核 / KPI（仅管理员）
+  { route: EnterpriseRoute.Kpi, label: '绩效考核', Icon: IconKpi },
   { route: EnterpriseRoute.RuntimeSettings, label: '运行设置', Icon: IconSettings },
   { route: EnterpriseRoute.Admin, label: '管理后台', Icon: IconAdmin },
 ];
