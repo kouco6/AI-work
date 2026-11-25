@@ -4258,5 +4258,7 @@
   "可见范围": "Visibility",
   "仅本人": "Private (self)",
   "指定用户": "Specific users",
-  "本部门": "Department"
+  "本部门": "Department",
+  "尝试": "attempts",
+  "军师异常处置（D-08 · 全程留痕）": "Strategist exception handling (D-08 · full audit trail)"
 }

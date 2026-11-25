@@ -21,7 +21,10 @@ type TaskRow = {
   kind: string;
   status: string;
   assignee: string | null;
-  assign_detail: { source?: string; candidates?: Candidate[]; note?: string } | null;
+  assign_detail: { source?: string; candidates?: Candidate[]; note?: string; error?: string } | null;
+  attempt_no?: number;
+  escalated?: boolean;
+  resolution_log?: { at: string; action: string; note: string }[];
 };
 
 const Q = `tenant_id=${TENANT_ID}`;
@@ -199,6 +202,21 @@ export default function TaskConsolePage({ onLogout }: TaskConsolePageProps) {
           ) : (
             <div className="mt-[12px] text-[13px] text-[#757f9c]">
               军师池暂无在岗军师（需先创建「协调层·军师」员工）。任务暂存待分配。
+            </div>
+          )}
+
+          {/* 异常处置留痕（FR-194 / D-08） */}
+          {last.escalated && (last.resolution_log?.length ?? 0) > 0 && (
+            <div className="mt-[14px] rounded-[10px] bg-[#fff8ec] px-[12px] py-[10px]">
+              <div className="text-[12px] font-semibold text-[#7a4a00]">
+                军师异常处置（D-08 · 全程留痕）
+                {last.attempt_no != null && <span className="ml-[8px] font-normal">尝试 {last.attempt_no} 次</span>}
+              </div>
+              <ul className="mt-[6px] flex flex-col gap-[3px] text-[12px] text-[#7a4a00]">
+                {last.resolution_log!.map((l, i) => (
+                  <li key={i}>· {l.action}—— {l.note}</li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

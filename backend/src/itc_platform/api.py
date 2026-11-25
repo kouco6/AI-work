@@ -292,6 +292,18 @@ def execute_task(
     return tasks.execute_task(tenant_id=tenant_id, task_id=task_id)
 
 
+@router.post("/tasks/{task_id}/escalate")
+def escalate_task(
+    task_id: int,
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """军师异常处置（FR-194 / D-08）：手动/自动触发——改派重跑或转人工接管。"""
+    from itc_platform.tasks import service as tasks
+
+    return {"escalated": tasks.escalate_to_strategist(tenant_id=tenant_id, task_id=task_id)}
+
+
 # ── 产出物管理（FR-211~216，D-10 存平台 + 平台 RBAC）────────────
 
 @router.get("/outputs")

@@ -188,6 +188,10 @@ class ItcTask(SQLModel, table=True):
     source: str = Field(default="任务台", max_length=32)  # 任务台 | 手动 | …
     session_id: Optional[str] = Field(default=None, max_length=64)
     token_used: int = Field(default=0)
+    # FR-194 军师异常处置（D-08）
+    attempt_no: int = Field(default=0)  # 已执行尝试次数（失败重试计数）
+    escalated: bool = Field(default=False)  # 是否已转军师处置
+    resolution_log: Optional[list] = Field(default=None, sa_column=Column(JSON))  # 处置留痕
     created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
 

@@ -44,6 +44,9 @@ def _to_dict(t: ItcTask) -> dict[str, Any]:
         "source": t.source,
         "token": t.token_used,
         "created_by": t.created_by,
+        "attempt_no": t.attempt_no or 0,
+        "escalated": bool(t.escalated),
+        "resolution_log": t.resolution_log or [],
         "createdAt": t.created_at.isoformat() if t.created_at else "",
         "updatedAt": t.updated_at.isoformat() if t.updated_at else "",
     }
@@ -244,8 +247,18 @@ def update_status(*, tenant_id: str, task_id: int, status: str, engine: Optional
     return _transition(tenant_id=tenant_id, task_id=task_id, engine=engine, expect_status=None, patch={"status": status})
 
 
+_MAX_ATTEMPTS = 3  # 初次 + 重试 2 次（FR-194）
+
+
+def _append_log(task: "ItcTask", action: str, note: str) -> None:
+    """处置留痕（FR-194 全程留痕）。"""
+    log = list(task.resolution_log or [])
+    log.append({"at": _now().isoformat(), "action": action, "note": note})
+    task.resolution_log = log
+
+
 def _execute_task_core(tenant_id: str, task_id: int) -> None:
-    """后台线程内执行任务：独立 Session + 建会话 + 绑定身份 + AgentLoop + 写回结果。"""
+    """后台线程内执行任务；失败时按 FR-194 **自动重试 2 次 → 转军师全权处置**。"""
     from app.core.agent_loop import AgentLoop
     from app.db import engine as app_engine
     from app.db.models import ChatSession, new_id
@@ -257,6 +270,7 @@ def _execute_task_core(tenant_id: str, task_id: int) -> None:
         if task is None or task.tenant_id != tenant_id or not task.assignee_agent_id:
             return
         task.status = "running"
+        task.attempt_no = (task.attempt_no or 0) + 1
         task.updated_at = _now()
         db.add(task)
         db.commit()
@@ -294,24 +308,99 @@ def _execute_task_core(tenant_id: str, task_id: int) -> None:
         )
         reply = ""
         token_used = 0
+        failed = False
+        err = ""
         try:
             for item in AgentLoop(db).handle_turn_stream(request):
                 data = item.get("data") if isinstance(item, dict) else None
                 if isinstance(data, dict):
                     if data.get("reply"):
                         reply = str(data["reply"])
+                    if data.get("runtime_error_code"):
+                        failed = True
+                        err = str(data.get("reply") or data["runtime_error_code"])
                     usage = data.get("usage") or data.get("token_usage")
                     if isinstance(usage, dict):
                         token_used = int(usage.get("total_tokens") or token_used)
-            task.status = "done"
-            task.description = (task.description + f"\n\n【执行结果】{reply[:1500]}").strip()
-        except Exception as exc:  # 执行失败标 failed，不抛出
-            task.status = "failed"
-            task.assign_detail = {**(task.assign_detail or {}), "error": str(exc)[:500]}
+        except Exception as exc:
+            failed = True
+            err = str(exc)
+        if not reply.strip():
+            failed = True
+            err = err or "空回复"
+
         task.token_used = token_used
         task.updated_at = _now()
+        if not failed:
+            task.status = "done"
+            task.description = (task.description + f"\n\n【执行结果】{reply[:1500]}").strip()
+            _append_log(task, "succeeded", f"第 {task.attempt_no} 次尝试成功")
+        else:
+            _append_log(task, "attempt_failed", f"第 {task.attempt_no} 次失败：{err[:200]}")
+            if task.attempt_no < _MAX_ATTEMPTS:
+                task.status = "assigned"  # 自动重试
+            else:
+                task.status = "failed"
+                task.assign_detail = {**(task.assign_detail or {}), "error": err[:500]}
         db.add(task)
         db.commit()
+
+    # 失败且重试用尽 → 转军师处置（在 session 外做，避免长事务）
+    if failed:
+        with Session(app_engine) as db2:
+            t2 = db2.get(ItcTask, task_id)
+            if t2 is not None and t2.status == "assigned":  # 还有重试机会
+                from staffdeck_harness.runtime.jobs import enqueue_runtime_job
+
+                enqueue_runtime_job(f"itc-task-{task_id}-r{t2.attempt_no}", _execute_task_core, tenant_id, task_id)
+            elif t2 is not None and t2.status == "failed" and not t2.escalated:
+                escalate_to_strategist(tenant_id=tenant_id, task_id=task_id)
+
+
+def escalate_to_strategist(*, tenant_id: str, task_id: int, engine: Optional[Engine] = None) -> int:
+    """军师全权处置（FR-194 / D-08）：重试用尽后——
+    ① 换一个军师/执行员工重跑（自动）；② 军师池无人则转人工接管（status=pending）。
+    全程写入 ``resolution_log``。
+    """
+    eng = engine or get_engine()
+    ensure_itc_schema(eng)
+    with Session(eng) as s:
+        task = s.get(ItcTask, task_id)
+        if task is None or task.tenant_id != tenant_id:
+            return 0
+        task.escalated = True
+        load = _open_load(tenant_id, s)
+        # 优先另一位军师（协调层），其次任一在岗员工
+        cands = [c for c in score_strategists(tenant_id=tenant_id, need_tags=[], incumbent_load=load, engines=eng)
+                 if c["agent_id"] != task.assignee_agent_id]
+        if not cands:
+            from app.db.models import AgentProfile
+            from sqlmodel import select as _sel
+
+            others = s.exec(_sel(AgentProfile).where(AgentProfile.tenant_id == tenant_id, AgentProfile.status == "active")).all()
+            cands = [{"agent_id": a.id, "name": a.name} for a in others if a.id != task.assignee_agent_id]
+        if cands:
+            chosen = cands[0]
+            prev = task.assignee_agent_id
+            task.assignee_agent_id = chosen["agent_id"]
+            task.status = "assigned"
+            task.attempt_no = 0  # 新员工重新计尝试
+            _append_log(task, "escalate_reassign", f"军师处置：改派 {prev} → {chosen['agent_id']}（{chosen.get('name','')}）重跑")
+            task.updated_at = _now()
+            s.add(task)
+            s.commit()
+            from staffdeck_harness.runtime.jobs import enqueue_runtime_job
+
+            enqueue_runtime_job(f"itc-task-{task_id}-esc", _execute_task_core, tenant_id, task_id)
+            return 1
+        # 无人可换 → 转人工接管（人在任务台重新派活）
+        _append_log(task, "escalate_human", "军师处置：无可改派员工 → 转人工接管")
+        task.status = "pending"
+        task.assignee_agent_id = None
+        task.updated_at = _now()
+        s.add(task)
+        s.commit()
+        return 1
 
 
 def execute_task(*, tenant_id: str, task_id: int, engine: Optional[Engine] = None) -> dict[str, Any]:
