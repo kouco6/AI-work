@@ -801,7 +801,7 @@ def _initialize_params(config: dict[str, Any] | None = None) -> dict[str, Any]:
     return {
         "protocolVersion": "2024-11-05",
         "capabilities": capabilities,
-        "clientInfo": {"name": "StaffDeck", "version": "0.1.0"},
+        "clientInfo": {"name": "系统", "version": "0.1.0"},
     }
 
 

@@ -195,8 +195,15 @@ class HarnessV3Engine(TurnCoordinator):
 
         def trace(event: str, payload: dict[str, Any]) -> None:
             from app.observability.event_log import EventLog
+            from staffdeck_harness.events.relay import fanout_event
             with services.session(identity, purpose="trace") as trace_db:
-                events = EventLog(trace_db)
+                # itc 二次开发：把 v3 引擎事件（含 llm_call_finished，带 usage）fanout 给
+                # event.observer 模块（如用量计量 / 审计），否则这些事件只落 AgentEvent 表、
+                # observer 收不到（原生此处未接 event_sink）。
+                events = EventLog(
+                    trace_db,
+                    event_sink=lambda event_type, pl: fanout_event(tenant_id, session_id, event_type, pl),
+                )
                 events.execution_engine = "harness_v3"
                 if turn_id:
                     events.bind_turn(turn_id, client_turn_id)

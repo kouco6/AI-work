@@ -8,8 +8,6 @@ import {
   XIcon,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import galleryImage from "@/assets/onboarding-gallery.png";
-import profileImage from "@/assets/onboarding-profile.png";
 
 export const ONBOARDING_SEEN_KEY = "staffdeck_onboarding_guide_seen";
 
@@ -24,7 +22,6 @@ type GuideCard = {
 };
 
 type GuideStep = {
-  image: string;
   eyebrow: string;
   titleLines: string[];
   description: string;
@@ -37,8 +34,7 @@ const CARD_BADGE_CLASS =
 
 const STEPS: GuideStep[] = [
   {
-    image: galleryImage,
-    eyebrow: "欢迎使用 StaffDeck",
+    eyebrow: "欢迎使用 itc AI数字员工平台",
     titleLines: ["数字员工", "全流程构建与管理平台"],
     description:
       "像招聘、培养、管理真人员工一样，构建你的数字员工团队。把重复的事情交给数字员工，让自己专注更重要的工作。",
@@ -61,7 +57,6 @@ const STEPS: GuideStep[] = [
     ],
   },
   {
-    image: profileImage,
     eyebrow: "核心概念",
     titleLines: ["三步搭建你的数字员工"],
     description: "先给它配大脑，再给它配能力，最后上岗对话。",
@@ -137,20 +132,11 @@ export default function OnboardingGuide() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="grid w-[904px] max-w-[calc(100vw-2rem)] grid-cols-1 gap-0 overflow-hidden rounded-[20px] border-0 p-0 ring-0 md:grid-cols-[474px_430px] sm:max-w-[904px]"
+        className="grid w-[430px] max-w-[calc(100vw-2rem)] grid-cols-1 gap-0 overflow-hidden rounded-[20px] border-0 p-0 ring-0 sm:max-w-[430px]"
       >
         <DialogTitle className="sr-only">
           {current.titleLines.join("")}
         </DialogTitle>
-
-        <div className="hidden h-[560px] bg-[#e9eef6] md:block">
-          <img
-            key={current.image}
-            src={current.image}
-            alt=""
-            className="size-full object-cover object-top-left"
-          />
-        </div>
 
         <div className="relative flex h-[560px] flex-col justify-between bg-linear-to-b from-[#f9fcff] to-[#e3f1ff] px-[36px] pt-[10px] pb-[32px]">
           <div className="flex items-center justify-end">

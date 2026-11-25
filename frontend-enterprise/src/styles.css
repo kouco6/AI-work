@@ -17,8 +17,8 @@
   --line: #e7dfd3;
   --muted: #eeece4;
   --muted-soft: #9a9b95;
-  --accent: #0f766e;
-  --accent-soft: #e1f1ed;
+  --accent: #1a71ff;
+  --accent-soft: #e8f0ff;
   --accent-foreground: #ffffff;
   --danger: #dc2626;
   --warning: #b45309;
@@ -31,7 +31,7 @@
   --font-body: "Inter", "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --font-display: "Inter", "IBM Plex Sans", "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --page-gradient-a: rgba(15, 118, 110, 0.055);
+  --page-gradient-a: rgba(26, 113, 255, 0.055);
   --page-gradient-top: #fbfaf6;
   --page-gradient-bottom: #f3f0e8;
   --panel-bg: rgba(249, 247, 241, 0.82);
@@ -59,15 +59,15 @@
   --card-foreground: #20201d;
   --popover: #ffffff;
   --popover-foreground: #20201d;
-  --primary: #0f766e;
+  --primary: #1a71ff;
   --primary-foreground: #ffffff;
   --secondary: #eeece4;
   --secondary-foreground: #20201d;
   --muted-foreground: #6d726e;
   --destructive: #dc2626;
   --input: #ded7cc;
-  --ring: #0f766e;
-  --chart-1: #0f766e;
+  --ring: #1a71ff;
+  --chart-1: #1a71ff;
   --chart-2: #6f7b42;
   --chart-3: #a85d32;
   --chart-4: #138a55;
@@ -321,7 +321,7 @@ body.skill-distill-fixed .content {
 .model-name-cell.is-default .model-default-indicator {
   color: var(--accent);
   background: var(--accent-soft);
-  border-color: rgba(15, 118, 110, 0.24);
+  border-color: rgba(26, 113, 255, 0.24);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
 }
 
@@ -5177,8 +5177,8 @@ pre {
   --line: #eceef1;
   --muted: #6b7280;
   --muted-soft: #9ca3af;
-  --accent: #111111;
-  --accent-soft: #f2f3f5;
+  --accent: #1a71ff;
+  --accent-soft: #e8f0ff;
   --accent-foreground: #ffffff;
   --shadow-float: 0 18px 48px rgba(17, 17, 17, 0.10);
   --shadow-soft: 0 8px 24px rgba(17, 17, 17, 0.045);

@@ -337,7 +337,7 @@ def poll_due_external_tasks(db: Session, *, dispatch=None) -> int:
                 "code": "DETACHED_OUTCOME_UNKNOWN",
                 "message": (
                     "The worker stopped after the external request may have been sent; "
-                    "StaffDeck will not replay a potentially non-idempotent request."
+                    "系统 will not replay a potentially non-idempotent request."
                 ),
             }
             task.finished_at = now

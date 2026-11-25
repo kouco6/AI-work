@@ -20,8 +20,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/lib/utils';
-import { FRAMEWORK_MANAGEMENT_INCLUDED } from '@/lib/productFeatures';
 import { teamIdFromScope, toTeamScope } from '@/lib/agent-scope-storage';
+import { FRAMEWORK_MANAGEMENT_INCLUDED } from '@/lib/productFeatures';
 import EmployeeAvatar from './EmployeeAvatar';
 import BrandLogo from './BrandLogo';
 import StaffdeckIcon from './StaffdeckIcon';
@@ -29,6 +29,9 @@ import { employeeDisplayNameWithCreator, employeeProfile, staffdeckDisplayText }
 import { EnterpriseRoute } from '../enums/routes';
 import type { AgentProfileRead, ChatSession, TeamRead } from '../types';
 import IconPlatform from '../assets/icons/nav-platform.svg?react';
+import IconHome from '../assets/icons/nav-home.svg?react';
+import IconTask from '../assets/icons/nav-task.svg?react';
+import IconOutputs from '../assets/icons/nav-outputs.svg?react';
 import IconAgents from '../assets/icons/nav-agents.svg?react';
 import IconTeams from '../assets/icons/nav-teams.svg?react';
 import IconFile from '../assets/icons/profile-file.svg?react';
@@ -63,10 +66,19 @@ type NavItem = {
   Icon: IconComponent;
 };
 
+// itc 工作台首页（FR-101~108，二次开发置顶项）
+const HOME_NAV: NavItem[] = [
+  { route: EnterpriseRoute.Home, label: '工作台首页', Icon: IconHome },
+];
+
 const PRIMARY_NAV: NavItem[] = [
   { route: EnterpriseRoute.Platform, label: '开放广场平台', Icon: IconPlatform },
   { route: EnterpriseRoute.Agents, label: '我的数字员工', Icon: IconAgents },
   { route: EnterpriseRoute.Teams, label: '我的团队', Icon: IconTeams },
+  // itc 二次开发新增：任务台 / 任务管理 / 输出物（照原型 proto PRIMARY_NAV）
+  { route: EnterpriseRoute.Tasks, label: '任务台', Icon: IconTask },
+  { route: EnterpriseRoute.TaskManagement, label: '任务管理', Icon: IconTask },
+  { route: EnterpriseRoute.Outputs, label: '输出物', Icon: IconOutputs },
   { route: EnterpriseRoute.Channels, label: '渠道接入', Icon: IconGlobe },
 ];
 
@@ -84,6 +96,7 @@ const CAPABILITY_NAV: NavItem[] = [
   { route: EnterpriseRoute.Tools, label: '工具', Icon: IconBriefcase },
 ];
 
+// 系统导航（仅管理员）——照原型 SYSTEM_NAV；平台级配置收敛进「管理后台」二级导航
 const SYSTEM_NAV: NavItem[] = [
   { route: EnterpriseRoute.Accounts, label: '账号管理', Icon: IconAccounts },
   { route: EnterpriseRoute.Models, label: '模型配置', Icon: IconModels },
@@ -93,7 +106,8 @@ const SYSTEM_NAV: NavItem[] = [
 
 function primaryNavItems(isAdmin: boolean): NavItem[] {
   const system = SYSTEM_NAV.filter((item) => FRAMEWORK_MANAGEMENT_INCLUDED || item.route !== EnterpriseRoute.Admin);
-  return isAdmin ? [...PRIMARY_NAV, ...system] : PRIMARY_NAV;
+  // 工作台首页置顶（itc 二次开发）
+  return [...HOME_NAV, ...(isAdmin ? [...PRIMARY_NAV, ...system] : PRIMARY_NAV)];
 }
 
 export type AppSidebarManagementProps = {

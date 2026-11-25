@@ -313,7 +313,7 @@ class ToolExecutor:
                     ),
                     "tenant_id": tool.tenant_id,
                     "guidance": (
-                        "Use external_task_status with this StaffDeck task_id. "
+                        "Use external_task_status with this 系统 task_id. "
                         "Do not resubmit the original tool while this task is pending."
                     ),
                 },

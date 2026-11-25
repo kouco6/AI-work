@@ -57,12 +57,12 @@ afterEach(() => {
 });
 
 describe('LoginPage', () => {
-  it('shows the original landing hero before revealing credentials', async () => {
+  it('shows the landing hero before revealing credentials', async () => {
     const user = userEvent.setup();
     renderLogin();
 
     expect(screen.getByText('我们来做什么？')).toBeTruthy();
-    expect(screen.getByAltText('StaffDeck 产品预览')).toBeTruthy();
+    // 产品预览图已按 itc 品牌化移除（避免残留 系统 界面），故不再断言图片。
     expect(screen.queryByLabelText('账号')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: '登录' }));

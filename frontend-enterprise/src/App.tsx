@@ -37,41 +37,15 @@ import {
   employeeProfile,
   preferredEmployeeAgent,
 } from "./employee";
-import AccountsPage from "./pages/AccountsPage";
-import AgentsPage from "./pages/AgentsPage";
-import ChannelsPage from "./pages/ChannelsPage";
 import ChatPage from "./pages/chat/ChatPage";
 import ChatGalleryPage from "./pages/chat/ChatGalleryPage";
-import DashboardPage from "./pages/dashboard/DashboardPage";
 import { loadEmployeeDirectory } from './api/employee-directory';
 import EmptyEmployeeState from "./components/EmptyEmployeeState";
 import DistillPage from "./pages/DistillPage";
-import GeneralSkillsPage, {
-  GeneralSkillEditPage,
-  GeneralSkillNewPage,
-} from "./pages/GeneralSkillsPage";
-import KnowledgeManagePage, { KnowledgeAddPage } from "./pages/KnowledgePage";
 import LoginPage from "./pages/LoginPage";
-import ModelsPage from "./pages/ModelsPage";
-import RuntimeSettingsPage from "./pages/RuntimeSettingsPage";
 import AdminPage from "./pages/admin/AdminPage";
-import OpenPlatformPage from "./pages/OpenPlatformPage";
-import PersonaPage from "./pages/PersonaPage";
-import SkillsPage from "./pages/SkillsPage";
-import TeamChatPage from "./pages/TeamChatPage";
-import TeamDetailPage from "./pages/TeamDetailPage";
-import TeamsPage from "./pages/TeamsPage";
-import {
-  ScheduledTaskEditPage,
-  ScheduledTaskNewPage,
-} from "./pages/dashboard/ScheduledTasksTab";
-import ToolsPage, {
-  McpServerEditPage,
-  McpServerNewPage,
-  ToolEditPage,
-  ToolNewPage,
-  ToolTestPage,
-} from "./pages/ToolsPage";
+// 企业台路由表从 App.tsx 抽出（新增页面改 routes/config.tsx，不再动本文件的大段 JSX）
+import { buildAppRoutes } from "./routes/config";
 import { useIsMobile } from "./hooks/use-mobile";
 import {
   Dialog,
@@ -98,6 +72,7 @@ import {
   toTeamScope,
 } from "@/lib/agent-scope-storage";
 import { cn } from "@/lib/utils";
+import { ORG_LEVELS, ORG_LEVEL_HINTS } from "./lib/orgLevels";
 import {
   SELECT_TRIGGER_CLASS,
   DIALOG_CANCEL_BUTTON_CLASS,
@@ -117,6 +92,8 @@ type AgentCreateFormState = {
   roleName: string;
   sourceMode: AgentCreateMode;
   copyFromAgentId: string;
+  /** itc 二次开发：组织层级（FR-122 / D-16）。executor | strategist | qa */
+  orgLevel: string;
 };
 
 const EMPTY_AGENT_FORM: AgentCreateFormState = {
@@ -125,7 +102,10 @@ const EMPTY_AGENT_FORM: AgentCreateFormState = {
   roleName: "",
   sourceMode: "copy",
   copyFromAgentId: "",
+  orgLevel: "executor",
 };
+
+/** itc 二次开发：组织层级选项（FR-122 / D-16）见 `lib/orgLevels.ts`（与编辑弹窗共用）。 */
 
 function Shell({
   auth,
@@ -457,6 +437,8 @@ function Shell({
     const baseMetadata = {
       ...sourceMetadata,
       system_prompt_summary: description,
+      // itc 二次开发：组织层级（FR-122 / D-16）——入职首位必选
+      org_level: agentForm.orgLevel,
       owner_user_id: auth.user.id,
       owner_username: auth.user.username,
       owner_display_name: auth.user.display_name || auth.user.username,
@@ -578,263 +560,9 @@ function Shell({
           )}
           {!isDistillRoute && !showEmployeeEmptyState && (
             <Routes>
-              <Route
-                path="/enterprise"
-                element={<Navigate to="/enterprise/dashboard" replace />}
-              />
-              <Route
-                path="/enterprise/platform"
-                element={
-                  <OpenPlatformPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/platform/:kind"
-                element={
-                  <OpenPlatformPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/dashboard"
-                element={
-                  <DashboardPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/agents"
-                element={
-                  <AgentsPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    onCreateAgent={openCreateAgentModal}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/teams"
-                element={
-                  <TeamsPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/teams/:teamId/chat"
-                element={<TeamChatPage />}
-              />
-              <Route
-                path="/enterprise/teams/:teamId"
-                element={
-                  <TeamDetailPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/memories"
-                element={
-                  <DashboardPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    profileTab="memories"
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/knowledge"
-                element={
-                  <KnowledgeManagePage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/knowledge/new"
-                element={
-                  <KnowledgeAddPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/feedback"
-                element={
-                  <DashboardPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    profileTab="logs"
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/channels"
-                element={
-                  <ChannelsPage currentUser={auth.user} onLogout={onLogout} />
-                }
-              />
-              <Route
-                path="/enterprise/scheduled-tasks"
-                element={
-                  <DashboardPage
-                    currentUser={auth.user}
-                    isAdmin={isAdmin}
-                    profileTab="scheduled"
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/scheduled-tasks/new"
-                element={
-                  <ScheduledTaskNewPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/scheduled-tasks/:taskId/edit"
-                element={
-                  <ScheduledTaskEditPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/skills"
-                element={
-                  <SkillsPage currentUser={auth.user} onLogout={onLogout} />
-                }
-              />
-              <Route
-                path="/enterprise/general-skills"
-                element={
-                  <GeneralSkillsPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/general-skills/new"
-                element={
-                  <GeneralSkillNewPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/general-skills/:slug/edit"
-                element={
-                  <GeneralSkillEditPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/accounts"
-                element={
-                  isAdmin ? (
-                    <AccountsPage currentUser={auth.user} onLogout={onLogout} />
-                  ) : (
-                    <Navigate to={EnterpriseRoute.Gallery} replace />
-                  )
-                }
-              />
-              <Route
-                path="/enterprise/models"
-                element={
-                  isAdmin ? (
-                    <ModelsPage currentUser={auth.user} onLogout={onLogout} />
-                  ) : (
-                    <Navigate to={EnterpriseRoute.Gallery} replace />
-                  )
-                }
-              />
-              <Route
-                path="/enterprise/runtime-settings"
-                element={
-                  isAdmin ? (
-                    <RuntimeSettingsPage currentUser={auth.user} />
-                  ) : (
-                    <Navigate to={EnterpriseRoute.Gallery} replace />
-                  )
-                }
-              />
-              <Route
-                path="/enterprise/tools"
-                element={
-                  <ToolsPage currentUser={auth.user} onLogout={onLogout} />
-                }
-              />
-              <Route
-                path="/enterprise/tools/new"
-                element={
-                  <ToolNewPage currentUser={auth.user} onLogout={onLogout} />
-                }
-              />
-              <Route
-                path="/enterprise/tools/mcp/new"
-                element={
-                  <McpServerNewPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/tools/mcp/:serverId/edit"
-                element={
-                  <McpServerEditPage
-                    currentUser={auth.user}
-                    onLogout={onLogout}
-                  />
-                }
-              />
-              <Route
-                path="/enterprise/tools/:toolId/edit"
-                element={
-                  <ToolEditPage currentUser={auth.user} onLogout={onLogout} />
-                }
-              />
-              <Route
-                path="/enterprise/tools/:toolId/test"
-                element={
-                  <ToolTestPage currentUser={auth.user} onLogout={onLogout} />
-                }
-              />
-              <Route
-                path="/enterprise/persona"
-                element={<PersonaPage />}
-              />
-              <Route
-                path="*"
-                element={<Navigate to="/enterprise/dashboard" replace />}
-              />
+              {buildAppRoutes({ auth, isAdmin, onLogout, openCreateAgentModal }).map((route) => (
+                <Route key={route.path} path={route.path} element={route.element} />
+              ))}
             </Routes>
           )}
         </div>
@@ -845,6 +573,43 @@ function Shell({
             新建数字员工
           </DialogTitle>
           <div className="agent-editor-form min-h-0 flex-1 overflow-y-auto px-[24px] pb-[16px]">
+            {/* itc 二次开发：组织层级（FR-122 / D-16）——入职首位必选，决定该员工可被分配的任务类型 */}
+            <label>
+              组织层级 <span className="text-[#d20b0b]">*</span>
+              <div className="grid gap-[8px]">
+                {ORG_LEVELS.map((level) => {
+                  const on = agentForm.orgLevel === level.value;
+                  return (
+                    <button
+                      key={level.value}
+                      type="button"
+                      onClick={() => setAgentForm((prev) => ({ ...prev, orgLevel: level.value }))}
+                      className={cn(
+                        "flex flex-col gap-[4px] rounded-[12px] border px-[14px] py-[10px] text-left transition-colors",
+                        on ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-border hover:bg-[#fafbfc]",
+                      )}
+                    >
+                      <span className="flex items-center gap-[8px]">
+                        <span
+                          className={cn(
+                            "rounded-full px-[8px] py-[1px] text-[12px]",
+                            on ? "bg-[var(--accent)] text-white" : "bg-[#f0f1f4] text-[#464c5e]",
+                          )}
+                        >
+                          {level.label}
+                        </span>
+                        <span className="text-[13px] font-medium text-[#18181a]">{level.title}</span>
+                      </span>
+                      <span className="text-[12px] leading-[17px] text-[#757f9c]">{level.desc}</span>
+                      <span className="text-[11px] text-[#9aa0ab]">{level.eg}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-[6px] rounded-[8px] bg-[#f6f7f9] px-[10px] py-[6px] text-[12px] leading-[17px] text-[#464c5e]">
+                {ORG_LEVEL_HINTS[agentForm.orgLevel] ?? ""}
+              </div>
+            </label>
             <label>
               创建方式
               <div className="inline-flex w-fit gap-[4px] rounded-[10px] border border-border p-[2px]">

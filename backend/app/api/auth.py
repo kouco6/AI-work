@@ -118,7 +118,7 @@ class AccountAPICredentialCreated(AccountAPICredentialRead):
     api_key: str
 
 
-ACCOUNT_API_CLIENT_PREFIX = "StaffDeck 账号全量 API"
+ACCOUNT_API_CLIENT_PREFIX = "系统 账号全量 API"
 
 
 def _require_local_account_management():

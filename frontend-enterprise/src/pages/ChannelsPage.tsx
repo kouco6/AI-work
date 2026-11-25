@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
+  UnderlineTabs,
+  type UnderlineTabItem,
 } from '@/components/ui';
 import { Button as UIButton } from '@/components/ui/button';
 
@@ -35,6 +37,8 @@ import IconChevronDown from '../assets/icons/chevron-down.svg?react';
 import IconAccount from '../assets/icons/sys-accounts.svg?react';
 import IconWarningFill from '../assets/icons/warning-fill.svg?react';
 import type { EnterpriseAuthUser } from '../auth';
+import { isEnterpriseAdmin } from '../auth';
+import DataSourcePage from './DataSourcePage';
 import { canManageEmployeeAgent, employeeDisplayName } from '../employee';
 import { getDateLocale } from '@/i18n';
 import { getClientTimeZone, parseBackendDateTime } from '@/lib/timezone';
@@ -242,6 +246,8 @@ export default function ChannelsPage({
   currentUser?: EnterpriseAuthUser;
   onLogout?: () => void;
 } = {}) {
+  // itc 二次开发：渠道接入顶层 tab（渠道接入 / 数据源），数据源并入本页。
+  const [topTab, setTopTab] = useState<'channels' | 'datasource'>('channels');
   const [bindings, setBindings] = useState<ChannelBindingRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState('');
@@ -1605,7 +1611,29 @@ export default function ChannelsPage({
   return (
     <div className="min-h-full box-border px-[48px] pt-[32px] pb-[43px] max-[900px]:px-[16px]">
       <AppHeader onLogout={onLogout} userName={currentUser?.username} title="渠道接入" />
-      {binding ? detailView : listView}
+
+      {/* itc 二次开发：数据源并入本页（FR-178~182），顶层 tab 切换 */}
+      <div className="-mt-[8px] mb-[4px]">
+        <UnderlineTabs
+          items={
+            [
+              { value: 'channels', label: '渠道接入' },
+              { value: 'datasource', label: '数据源' },
+            ] as UnderlineTabItem<'channels' | 'datasource'>[]
+          }
+          value={topTab}
+          onChange={setTopTab}
+          aria-label="渠道与数据源"
+        />
+      </div>
+
+      {topTab === 'datasource' ? (
+        <DataSourcePage isAdmin={isEnterpriseAdmin(currentUser)} onLogout={onLogout ?? (() => {})} embedded />
+      ) : (
+        <>
+          {binding ? detailView : listView}
+        </>
+      )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent

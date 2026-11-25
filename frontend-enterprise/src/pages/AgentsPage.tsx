@@ -26,6 +26,7 @@ import {
 } from '../employee';
 import { emitAgentScopeChange, isTeamScope, persistSharedAgentScope, readEmployeeScope } from '../lib/agent-scope-storage';
 import type { AgentProfileRead } from '../types';
+import { inferOrgLevel } from '../lib/orgLevels';
 
 const ENTERPRISE_AGENT_STORAGE_KEY = 'ultrarag_enterprise_agent_scope';
 
@@ -49,7 +50,7 @@ export default function AgentsPage({
   const [deleting, setDeleting] = useState(false);
   const [selectingAgentId, setSelectingAgentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [employeeFilter, setEmployeeFilter] = useState<'all' | 'online' | 'offline' | 'pending'>('all');
+  const [employeeFilter, setEmployeeFilter] = useState<'all' | 'online' | 'offline' | 'pending' | 'coord' | 'exec'>('all');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
     () => readEmployeeScope() || null,
   );
@@ -99,10 +100,16 @@ export default function AgentsPage({
   const filteredEmployees = employees.filter((item) => {
     const profile = employeeProfile(item);
     const keyword = searchTerm.trim().toLowerCase();
+    // 组织层级（FR-122/D-16）：读 metadata.org_level，缺省按岗位/名称推断
+    const level = (typeof item.metadata?.org_level === 'string' && item.metadata.org_level)
+      || inferOrgLevel(`${profile.roleName} ${item.name}`);
+    const isCoord = level === 'strategist' || level === 'qa';
     const matchesFilter = employeeFilter === 'all'
       || (employeeFilter === 'online' && item.status === 'active')
       || (employeeFilter === 'offline' && item.status !== 'active')
-      || (employeeFilter === 'pending' && pendingEmployees.includes(item));
+      || (employeeFilter === 'pending' && pendingEmployees.includes(item))
+      || (employeeFilter === 'coord' && isCoord)
+      || (employeeFilter === 'exec' && !isCoord);
     if (!matchesFilter) return false;
     if (!keyword) return true;
     return [
@@ -213,6 +220,9 @@ export default function AgentsPage({
 
   const employeeTabs: UnderlineTabItem<typeof employeeFilter>[] = [
     { value: 'all', label: '全部员工' },
+    // itc 二次开发：组织层级分组（FR-122/D-16）
+    { value: 'coord', label: '协调层' },
+    { value: 'exec', label: '执行层' },
     { value: 'online', label: '在线员工' },
     { value: 'offline', label: '下线员工' },
   ];

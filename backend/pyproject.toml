@@ -64,7 +64,15 @@ py-modules = ["desktop_launcher", "cli_launcher", "feishu_connector_worker", "si
 # on purpose so the legacy tree stays untouched). Both are part of the wheel.
 [tool.setuptools.packages.find]
 where = [".", "src"]
-include = ["app*", "mock_servers*", "staffdeck_harness*", "staffdeck*"]
+include = [
+  "app*",
+  "mock_servers*",
+  "staffdeck_harness*",
+  "staffdeck*",
+  # itc 二次开发包（独立命名空间，与 StaffDeck 源码物理隔离）
+  "itc_modules*",
+  "itc_platform*",
+]
 
 [tool.setuptools.package-data]
 staffdeck = ["py.typed", "skills/staffdeck-cli/SKILL.md"]

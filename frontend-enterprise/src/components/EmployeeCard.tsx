@@ -6,6 +6,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { orgLevelLabel } from '@/lib/orgLevels';
 
 import IconChat from '../assets/icons/chat.svg?react';
 import IconEdit from '../assets/icons/edit.svg?react';
@@ -70,6 +71,7 @@ export default function EmployeeCard({
 
   // Show raw API values on the card (bypass the SD1 term relabeling in staffdeckDisplayText).
   const rawRoleName = (employee.metadata?.role_name as string | undefined) || profile.roleName;
+  const orgTier = employee.metadata?.org_level ? orgLevelLabel(String(employee.metadata.org_level)) : '';
   const displayName = employee.is_overall ? '开放广场' : employeeDisplayNameWithCreator(employee);
   const displayDescription = employee.description || '暂无描述';
 
@@ -121,8 +123,18 @@ export default function EmployeeCard({
 
         {/* Name / role / status */}
         <div className="flex-1 flex flex-col gap-[2px]">
-          <strong className="truncate text-[12px] font-bold text-[#18181A]">
+          <strong className="flex items-center gap-[6px] truncate text-[12px] font-bold text-[#18181A]">
             {employee.is_overall ? displayName : <span data-i18n-ignore>{displayName}</span>}
+            {/* itc 二次开发：组织层级标签（FR-122/D-16） */}
+            {!employee.is_overall && orgTier && (
+              <span
+                className="shrink-0 rounded-full px-[6px] py-[1px] text-[9px] font-normal text-[var(--accent)]"
+                style={{ background: 'var(--accent-soft)' }}
+                data-i18n-ignore
+              >
+                {orgTier}
+              </span>
+            )}
           </strong>
           <span className="truncate text-[10px] text-[#757F9C]">
             {rawRoleName === '待补充岗位' ? rawRoleName : <span data-i18n-ignore>{rawRoleName}</span>}

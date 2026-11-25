@@ -20,6 +20,7 @@ import { SELECT_TRIGGER_CLASS } from '@/lib/enterprise-ui';
 import { api, TENANT_ID } from '../api/client';
 import type { EnterpriseAuthUser } from '../auth';
 import { employeeDisplayName, employeeProfile } from '../employee';
+import { ORG_LEVELS, inferOrgLevel } from '../lib/orgLevels';
 import type { AgentProfileRead } from '../types';
 import EmployeeAvatar from './EmployeeAvatar';
 import { useEmployeeDetails } from '../hooks/useEmployeeDetails';
@@ -27,6 +28,7 @@ import { useEmployeeDetails } from '../hooks/useEmployeeDetails';
 type EmployeeProfileFormValues = {
   name: string;
   roleName: string;
+  orgLevel: string;
   onboardedAt: string;
   description: string;
   personaPrompt: string;
@@ -46,6 +48,7 @@ const WORK_MODE_OPTIONS = ['识别意图', '补齐信息', '调用 SOP', '查询
 const BLANK_FORM: EmployeeProfileFormValues = {
   name: '',
   roleName: '',
+  orgLevel: 'executor',
   onboardedAt: '',
   description: '',
   personaPrompt: '',
@@ -83,6 +86,10 @@ export default function EmployeeProfileEditor({
     setForm({
       name: employeeDisplayName(agent),
       roleName: profile.roleName === '待补充岗位' ? '' : profile.roleName,
+      orgLevel:
+        (typeof agent.metadata?.org_level === 'string' && agent.metadata.org_level) ||
+        inferOrgLevel(`${profile.roleName} ${agent.name}`) ||
+        'executor',
       onboardedAt: profile.onboardedAt === '-' ? new Date().toISOString().slice(0, 10) : profile.onboardedAt,
       description: agent.description || '',
       personaPrompt: agent.persona_prompt || '',
@@ -109,6 +116,7 @@ export default function EmployeeProfileEditor({
         ...(agent.metadata || {}),
         blank_onboarding: false,
         role_name: form.roleName.trim() || '待补充岗位',
+        org_level: form.orgLevel,
         onboarded_at: form.onboardedAt || new Date().toISOString().slice(0, 10),
         system_prompt_summary: form.systemPromptSummary.trim(),
         work_styles: compactTags(form.workStyles),
@@ -174,6 +182,20 @@ export default function EmployeeProfileEditor({
                 </LabeledField>
                 <LabeledField label="岗位">
                   <Input value={form.roleName} placeholder="例如：研发" onChange={(event) => update({ roleName: event.target.value })} />
+                </LabeledField>
+                <LabeledField label="组织层级">
+                  <Select value={form.orgLevel} onValueChange={(v) => update({ orgLevel: v })}>
+                    <SelectTrigger className={SELECT_TRIGGER_CLASS}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORG_LEVELS.map((l) => (
+                        <SelectItem key={l.value} value={l.value}>
+                          {l.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </LabeledField>
                 <LabeledField label="入职时间">
                   <Input type="date" value={form.onboardedAt} onChange={(event) => update({ onboardedAt: event.target.value })} />

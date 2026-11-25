@@ -145,9 +145,35 @@ export default function ModelsPage({
   const [testingModelIds, setTestingModelIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState<ModelForm>(BLANK_MODEL_FORM);
   const [availableProtocols, setAvailableProtocols] = useState<ModelForm['api_protocol'][]>(['openai_chat_completions']);
+  // FR-147 一键获取模型列表
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
 
   const updateForm = <K extends keyof ModelForm>(key: K, value: ModelForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  /** FR-147：用 Base URL + API Key 拉取该服务的可用模型清单，点选回填 Model 字段。 */
+  const fetchModelList = async () => {
+    if (!form.base_url.trim()) {
+      notify.error('请先填写 Base URL');
+      return;
+    }
+    setFetchingModels(true);
+    try {
+      const res = await api.post<{ models: string[] }>(
+        `/api/enterprise/itc/models/list?tenant_id=${TENANT_ID}`,
+        { base_url: form.base_url, api_key: form.api_key },
+      );
+      const models = res?.models ?? [];
+      setModelOptions(models);
+      if (models.length === 0) notify.info('该服务未返回可用模型');
+      else notify.success(`拉取到 ${models.length} 个模型`);
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : '获取模型列表失败（该功能需后端支持）');
+    } finally {
+      setFetchingModels(false);
+    }
+  };
 
   const load = (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -596,7 +622,38 @@ export default function ModelsPage({
                 />
               </LabeledField>
               <LabeledField label="Model">
-                <Input value={form.model} placeholder="例如 gpt-4o" onChange={(event) => updateForm('model', event.target.value)} />
+                <div className="flex items-center gap-[8px]">
+                  {modelOptions.length > 0 ? (
+                    <Select value={form.model} onValueChange={(v) => updateForm('model', v)}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="选择模型" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {modelOptions.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={form.model}
+                      placeholder="例如 gpt-4o"
+                      onChange={(event) => updateForm('model', event.target.value)}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void fetchModelList()}
+                    disabled={fetchingModels}
+                    title="用 Base URL + API Key 拉取该服务可用模型清单（FR-147）"
+                    className="flex h-[36px] shrink-0 items-center gap-[4px] rounded-[10px] border-[0.5px] border-[#e3e7f1] bg-white px-[10px] text-[12px] text-[#464c5e] hover:bg-[#f6f6f6] disabled:opacity-60"
+                  >
+                    {fetchingModels ? <LoaderCircle className="size-[14px] animate-spin" /> : <span>⚡</span>}
+                    获取列表
+                  </button>
+                </div>
               </LabeledField>
               <LabeledField label="API Key">
                 <Input

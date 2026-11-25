@@ -135,7 +135,7 @@ def on_shutdown() -> None:
 
 @app.get("/api/health", tags=["health"])
 def health() -> dict[str, str]:
-    return {"status": "ok", "app": "StaffDeck"}
+    return {"status": "ok", "app": "系统"}
 
 
 app.include_router(app_updates.router)
@@ -178,6 +178,9 @@ app.include_router(sessions.router)
 app.include_router(traces.router)
 app.include_router(mock.router)
 app.include_router(a2a_router)
+# itc 二次开发：成本/KPI/配额查询 API（FR-145/151~156）
+from itc_platform.api import router as itc_router  # noqa: E402
+app.include_router(itc_router)
 
 # Business frontend compatibility layer (transparent to releases/direct clients).
 from app.api_enterprise import register_business_compat
