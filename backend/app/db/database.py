@@ -21,7 +21,9 @@ settings = get_settings()
 
 database_url = _normalize_database_url(settings.database_url)
 connect_args = {"check_same_thread": False, "timeout": 30} if database_url.startswith("sqlite") else {}
-engine: Engine = create_engine(database_url, echo=False, connect_args=connect_args)
+# itc 二次开发（D-11）：PostgreSQL 下加连接池（多 worker / 百人并发）；SQLite 保持原样。
+_pool_kwargs = {} if database_url.startswith("sqlite") else {"pool_size": 10, "max_overflow": 20, "pool_pre_ping": True}
+engine: Engine = create_engine(database_url, echo=False, connect_args=connect_args, **_pool_kwargs)
 
 _DEFAULT_MODEL_OUTPUT_LIMIT_MIGRATION_ID = "20260712_default_model_output_tokens_8192"
 _LEGACY_DEFAULT_MODEL_OUTPUT_TOKENS = 2048

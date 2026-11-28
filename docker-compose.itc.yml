@@ -1,0 +1,51 @@
+# itc AI数字员工平台 · 独立部署编排（不改编 upstream compose.yaml）
+# 用法（在 /opt/itc-staffdeck）：docker compose -f docker-compose.itc.yml up --build -d
+# 变量从同目录 .env 读取：PG_PASSWORD / APP_SECRET / MODEL_BASE_URL / MODEL_NAME / MODEL_API_KEY
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: staffdeck
+      POSTGRES_USER: staffdeck
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?set PG_PASSWORD in .env}
+    volumes:
+      - staffdeck-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U staffdeck -d staffdeck"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  staffdeck:
+    build:
+      context: .
+      target: app
+    ports:
+      # 只绑本机，外部经 nginx(8080) 反代；不暴露到公网
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # 数据库：PostgreSQL（D-11；非 sqlite 时后端自动跳过 SQLite 专有迁移、启用连接池）
+      DATABASE_URL: "postgresql+psycopg://staffdeck:${PG_PASSWORD}@db:5432/staffdeck"
+      APP_SECRET: "${APP_SECRET:?set APP_SECRET in .env}"
+      # 模型：启动时自动建默认 ModelConfig（seed.py）
+      DEMO_MODEL_BASE_URL: "${MODEL_BASE_URL}"
+      DEMO_MODEL_NAME: "${MODEL_NAME}"
+      DEMO_MODEL_API_KEY: "${MODEL_API_KEY}"
+      # itc 平台服务层模块（ModuleRegistry）
+      STAFFDECK_HARNESS_MODULES: "itc_modules.usage_meter:register,itc_modules.audit_observer:register,itc_modules.memory_shared:register"
+      STAFFDECK_HARNESS_DISABLED_MODULES: "memory.default"
+      # 经 nginx 8080 对外访问
+      CORS_ORIGINS: "http://172.16.204.64:8080,http://127.0.0.1:5173"
+    volumes:
+      - staffdeck-data:/data
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  staffdeck-pg:
+  staffdeck-data:
