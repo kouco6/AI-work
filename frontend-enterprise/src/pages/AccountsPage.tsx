@@ -111,6 +111,7 @@ export default function AccountsPage({
   const [deptOpen, setDeptOpen] = useState(false);
   const [deptName, setDeptName] = useState('');
   const [deptStats, setDeptStats] = useState<DeptStats | null>(null);
+  const [deptDeleteTarget, setDeptDeleteTarget] = useState<DeptLite | null>(null);
 
   async function loadDepts() {
     try {
@@ -156,11 +157,17 @@ export default function AccountsPage({
       notify.error(`「${d.name}」下还有 ${d.memberCount} 名成员，请先把成员移出再删除`);
       return;
     }
-    if (!window.confirm(`删除部门「${d.name}」？`)) return;
+    setDeptDeleteTarget(d);
+  }
+
+  async function confirmDeleteDept() {
+    const d = deptDeleteTarget;
+    if (!d) return;
     try {
       await api.delete(`/api/enterprise/itc/depts/${d.id}?tenant_id=${TENANT_ID}`);
       notify.success('部门已删除');
       if (deptStats?.name === d.name) setDeptStats(null);
+      setDeptDeleteTarget(null);
       await loadDepts();
     } catch (e) {
       notify.error(e instanceof Error ? e.message : '删除部门失败');
@@ -580,6 +587,15 @@ export default function AccountsPage({
         title={deleteTarget ? `删除账号「${deleteTarget.username}」？` : ''}
         description="删除后该账号无法登录，但其创建的数字员工仍然保留。"
         onConfirm={() => void confirmDelete()}
+      />
+
+      {/* itc 二次开发：删除部门确认（FR-266，应用内弹窗，非浏览器原生） */}
+      <ConfirmDialog
+        open={Boolean(deptDeleteTarget)}
+        onOpenChange={(open) => !open && setDeptDeleteTarget(null)}
+        title={deptDeleteTarget ? `删除部门「${deptDeleteTarget.name}」？` : ''}
+        description="删除后该部门将从组织架构中移除，操作不可撤销。"
+        onConfirm={() => void confirmDeleteDept()}
       />
 
       {/* itc 二次开发：新增部门弹窗（FR-266） */}

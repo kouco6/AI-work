@@ -4290,5 +4290,6 @@
   "部门已删除": "Department deleted",
   "删除部门失败": "Delete department failed",
   "删除部门「{1}」？": "Delete department \"{1}\"?",
-  "「{1}」下还有 {2} 名成员，请先把成员移出再删除": "\"{1}\" still has {2} member(s). Remove them before deleting."
+  "「{1}」下还有 {2} 名成员，请先把成员移出再删除": "\"{1}\" still has {2} member(s). Remove them before deleting.",
+  "删除后该部门将从组织架构中移除，操作不可撤销。": "The department will be removed from the org structure. This cannot be undone."
 }
