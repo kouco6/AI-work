@@ -227,3 +227,31 @@ class ItcArtifact(SQLModel, table=True):
     archived: bool = Field(default=False)
     created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
+
+
+class Dept(SQLModel, table=True):
+    """部门（FR-266）。真实公司的组织单元，用于部门权限与统计。
+
+    与原生 ``User.role``（仅 admin/member）**解耦**——用户归哪个部门存本表（非侵入）。
+    """
+
+    __tablename__ = "itc_depts"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: str = Field(index=True, max_length=64)
+    name: str = Field(max_length=128)
+    parent_id: Optional[int] = Field(default=None, index=True)  # 支持层级（可选）
+    leader_user_id: Optional[str] = Field(default=None, max_length=64)  # 部门负责人
+    created_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(default_factory=_utcnow, sa_column=Column(DateTime(timezone=True)))
+
+
+class DeptMember(SQLModel, table=True):
+    """用户 ↔ 部门 归属（FR-266）。"""
+
+    __tablename__ = "itc_dept_members"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: str = Field(index=True, max_length=64)
+    dept_id: int = Field(index=True, foreign_key="itc_depts.id")
+    user_id: str = Field(index=True, max_length=64)

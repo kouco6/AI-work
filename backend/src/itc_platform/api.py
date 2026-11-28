@@ -304,6 +304,85 @@ def escalate_task(
     return {"escalated": tasks.escalate_to_strategist(tenant_id=tenant_id, task_id=task_id)}
 
 
+# ── 部门管理（FR-232/266）────────────────────────────────────
+
+@router.get("/depts")
+def list_depts(
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> list[dict]:
+    """部门列表（含成员数与成员 id）。"""
+    _ensure_itc_schema()
+    from itc_platform.depts import service as depts
+
+    return depts.list_depts(tenant_id)
+
+
+@router.post("/depts")
+def create_dept(
+    body: dict = Body(...),
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """新增部门（仅管理员）。"""
+    _require_admin(current_user)
+    _ensure_itc_schema()
+    from itc_platform.depts import service as depts
+
+    return {"id": depts.create_dept(
+        tenant_id=tenant_id, name=str(body.get("name") or "").strip(),
+        parent_id=body.get("parent_id"), leader_user_id=body.get("leader_user_id"),
+    )}
+
+
+@router.put("/depts/{dept_id}/members")
+def set_dept_members(
+    dept_id: int,
+    body: dict = Body(...),
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """设置部门成员（仅管理员或该部门负责人）。"""
+    from app.security.permissions import is_admin_user
+
+    from itc_platform.depts import service as depts
+
+    if not is_admin_user(current_user) and not depts.is_dept_leader(tenant_id, dept_id, current_user.id):
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=403, detail="仅管理员或部门负责人可维护成员")
+    _ensure_itc_schema()
+    ids = body.get("user_ids") if isinstance(body.get("user_ids"), list) else []
+    return {"count": depts.set_members(tenant_id=tenant_id, dept_id=dept_id, user_ids=ids)}
+
+
+@router.get("/depts/{dept_id}/stats")
+def dept_stats(
+    dept_id: int,
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """部门统计（成员数 + 用量/成本）。"""
+    _ensure_itc_schema()
+    from itc_platform.depts import service as depts
+
+    return depts.dept_stats(tenant_id, dept_id)
+
+
+@router.delete("/depts/{dept_id}")
+def delete_dept(
+    dept_id: int,
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """删除部门（仅管理员）。"""
+    _require_admin(current_user)
+    _ensure_itc_schema()
+    from itc_platform.depts import service as depts
+
+    return {"deleted": depts.delete_dept(tenant_id=tenant_id, dept_id=dept_id)}
+
+
 # ── 产出物管理（FR-211~216，D-10 存平台 + 平台 RBAC）────────────
 
 @router.get("/outputs")

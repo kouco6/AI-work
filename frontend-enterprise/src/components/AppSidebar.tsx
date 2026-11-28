@@ -32,6 +32,7 @@ import IconPlatform from '../assets/icons/nav-platform.svg?react';
 import IconHome from '../assets/icons/nav-home.svg?react';
 import IconTask from '../assets/icons/nav-task.svg?react';
 import IconKpi from '../assets/icons/nav-kpi.svg?react';
+import IconOrg from '../assets/icons/nav-org.svg?react';
 import IconOutputs from '../assets/icons/nav-outputs.svg?react';
 import IconAgents from '../assets/icons/nav-agents.svg?react';
 import IconTeams from '../assets/icons/nav-teams.svg?react';
@@ -103,6 +104,8 @@ const SYSTEM_NAV: NavItem[] = [
   { route: EnterpriseRoute.Models, label: '模型配置', Icon: IconModels },
   // itc 二次开发：绩效考核 / KPI（仅管理员）
   { route: EnterpriseRoute.Kpi, label: '绩效考核', Icon: IconKpi },
+  // itc 二次开发：部门权限管理（仅管理员）
+  { route: EnterpriseRoute.Depts, label: '部门权限', Icon: IconOrg },
   { route: EnterpriseRoute.RuntimeSettings, label: '运行设置', Icon: IconSettings },
   { route: EnterpriseRoute.Admin, label: '管理后台', Icon: IconAdmin },
 ];

@@ -17,6 +17,8 @@ export enum EnterpriseRoute {
   OrgChart = '/enterprise/org',
   /** itc 绩效考核 / KPI（FR-128/130/132，二次开发新增） */
   Kpi = '/enterprise/kpi',
+  /** itc 部门权限管理（FR-232/266，二次开发新增） */
+  Depts = '/enterprise/depts',
   /** itc 共享记忆 L1/L2（FR-201/202，二次开发新增） */
   SharedMemory = '/enterprise/shared-memory',
   Platform = '/enterprise/platform',
