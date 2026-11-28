@@ -4285,5 +4285,10 @@
   "更新部门失败": "Update department failed",
   "新增部门失败": "Add department failed",
   "已更新部门归属": "Department updated",
-  "暂无部门。新增后可在下方人员表给成员分配部门。": "No departments yet. Add one, then assign members in the table below."
+  "暂无部门。新增后可在下方人员表给成员分配部门。": "No departments yet. Add one, then assign members in the table below.",
+  "删除部门": "Delete department",
+  "部门已删除": "Department deleted",
+  "删除部门失败": "Delete department failed",
+  "删除部门「{1}」？": "Delete department \"{1}\"?",
+  "「{1}」下还有 {2} 名成员，请先把成员移出再删除": "\"{1}\" still has {2} member(s). Remove them before deleting."
 }

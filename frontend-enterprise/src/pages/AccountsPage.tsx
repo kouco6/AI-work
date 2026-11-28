@@ -151,6 +151,22 @@ export default function AccountsPage({
     }
   }
 
+  async function removeDept(d: DeptLite) {
+    if (d.memberCount > 0) {
+      notify.error(`「${d.name}」下还有 ${d.memberCount} 名成员，请先把成员移出再删除`);
+      return;
+    }
+    if (!window.confirm(`删除部门「${d.name}」？`)) return;
+    try {
+      await api.delete(`/api/enterprise/itc/depts/${d.id}?tenant_id=${TENANT_ID}`);
+      notify.success('部门已删除');
+      if (deptStats?.name === d.name) setDeptStats(null);
+      await loadDepts();
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : '删除部门失败');
+    }
+  }
+
   async function assignDept(userId: string, deptId: string) {
     try {
       await api.post(`/api/enterprise/itc/depts/assign-user?tenant_id=${TENANT_ID}`, {
@@ -403,17 +419,28 @@ export default function AccountsPage({
             <span className="text-[12px] text-[#9aa0ab]">暂无部门。新增后可在下方人员表给成员分配部门。</span>
           ) : (
             depts.map((d) => (
-              <button
+              <span
                 key={d.id}
-                type="button"
-                onClick={() => void viewDeptStats(d)}
-                className={`flex items-center gap-[8px] rounded-[10px] border px-[12px] py-[6px] text-[13px] transition-colors ${
-                  deptStats?.name === d.name ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]' : 'border-[#e3e7f1] text-[#464c5e] hover:bg-[#fafbfc]'
+                className={`group flex items-center gap-[8px] rounded-[10px] border px-[12px] py-[6px] text-[13px] transition-colors ${
+                  deptStats?.name === d.name ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]' : 'border-[#e3e7f1] text-[#464c5e]'
                 }`}
               >
-                <span>{d.name}</span>
-                <span className="text-[11px] text-[#9aa0ab]">{d.memberCount} 人</span>
-              </button>
+                <button type="button" onClick={() => void viewDeptStats(d)} className="flex items-center gap-[8px]">
+                  <span>{d.name}</span>
+                  <span className="text-[11px] text-[#9aa0ab]">{d.memberCount} 人</span>
+                </button>
+                {currentUser?.source !== 'base_identity' && (
+                  <button
+                    type="button"
+                    aria-label="删除部门"
+                    title="删除部门"
+                    onClick={() => void removeDept(d)}
+                    className="grid size-[16px] shrink-0 place-items-center rounded-full text-[#c0c6d4] hover:bg-[#fce7e7] hover:text-[#d20b0b]"
+                  >
+                    <IconTrash className="size-[13px]" />
+                  </button>
+                )}
+              </span>
             ))
           )}
         </div>
