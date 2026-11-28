@@ -2342,7 +2342,7 @@
   "六": "Sat",
   "…等": "…and ",
   "还有": "+ ",
-  "成员": "Member",
+  "成员": "Members",
   "能力范围": "Capability Scope",
   "通用": "General",
   "仅限 SOP": "SOP Only",
@@ -4278,5 +4278,12 @@
   "统计": "Stats",
   "新增失败": "Add failed",
   "已新增部门": "Department added",
-  "请填写部门名称": "Please enter a department name"
+  "请填写部门名称": "Please enter a department name",
+  "组织管理": "Organization",
+  "成本 ¥": "Cost ¥",
+  "（FR-266 · 点部门看统计）": "(FR-266 · click a department for stats)",
+  "更新部门失败": "Update department failed",
+  "新增部门失败": "Add department failed",
+  "已更新部门归属": "Department updated",
+  "暂无部门。新增后可在下方人员表给成员分配部门。": "No departments yet. Add one, then assign members in the table below."
 }

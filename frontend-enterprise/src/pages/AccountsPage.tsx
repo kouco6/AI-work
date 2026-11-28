@@ -29,6 +29,7 @@ import { MENU_CONTENT_CLASS, MENU_ITEM_CLASS, MENU_ITEM_DANGER_CLASS, MOBILE_CAR
 
 import { api, TENANT_ID } from '../api/client';
 import IconAccounts from '../assets/icons/sys-accounts.svg?react';
+import IconOrg from '../assets/icons/nav-org.svg?react';
 import IconAdd from '../assets/icons/add.svg?react';
 import IconClear from '../assets/icons/field-clear.svg?react';
 import IconEdit from '../assets/icons/edit.svg?react';
@@ -63,7 +64,12 @@ type AccountCreateDraft = {
   displayName: string;
   password: string;
   role: 'admin' | 'member';
+  deptId: string; // itc 部门归属（"" = 未分配）
 };
+
+/** itc 部门（FR-266）。 */
+type DeptLite = { id: string; name: string; memberCount: number; leaderUserId: string | null };
+type DeptStats = { name: string; memberCount: number; calls: number; totalTokens: number; cost: number };
 
 const ACCOUNT_PAGE_SIZE = 10;
 
@@ -94,10 +100,69 @@ export default function AccountsPage({
     displayName: '',
     password: '',
     role: 'member',
+    deptId: '',
   });
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EmployeeAccount | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // itc 部门（FR-266）
+  const [depts, setDepts] = useState<DeptLite[]>([]);
+  const [userDept, setUserDept] = useState<Record<string, string>>({});
+  const [deptOpen, setDeptOpen] = useState(false);
+  const [deptName, setDeptName] = useState('');
+  const [deptStats, setDeptStats] = useState<DeptStats | null>(null);
+
+  async function loadDepts() {
+    try {
+      const [ds, map] = await Promise.all([
+        api.get<DeptLite[]>(`/api/enterprise/itc/depts?tenant_id=${TENANT_ID}`),
+        api.get<Record<string, string>>(`/api/enterprise/itc/depts/user-map?tenant_id=${TENANT_ID}`),
+      ]);
+      setDepts(ds);
+      setUserDept(map);
+    } catch {
+      setDepts([]);
+      setUserDept({});
+    }
+  }
+
+  async function addDept() {
+    if (!deptName.trim()) {
+      notify.error('请填写部门名称');
+      return;
+    }
+    try {
+      await api.post(`/api/enterprise/itc/depts?tenant_id=${TENANT_ID}`, { name: deptName.trim() });
+      notify.success('已新增部门');
+      setDeptName('');
+      setDeptOpen(false);
+      await loadDepts();
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : '新增部门失败');
+    }
+  }
+
+  async function viewDeptStats(d: DeptLite) {
+    try {
+      const s = await api.get<DeptStats>(`/api/enterprise/itc/depts/${d.id}/stats?tenant_id=${TENANT_ID}`);
+      setDeptStats(s);
+    } catch {
+      setDeptStats(null);
+    }
+  }
+
+  async function assignDept(userId: string, deptId: string) {
+    try {
+      await api.post(`/api/enterprise/itc/depts/assign-user?tenant_id=${TENANT_ID}`, {
+        user_id: userId,
+        dept_id: deptId ? Number(deptId) : null,
+      });
+      notify.success('已更新部门归属');
+      await loadDepts();
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : '更新部门失败');
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -113,6 +178,7 @@ export default function AccountsPage({
 
   useEffect(() => {
     void load();
+    void loadDepts();
   }, []);
 
   const filteredRows = useMemo(() => {
@@ -132,7 +198,7 @@ export default function AccountsPage({
   }
 
   function openCreate() {
-    setCreateDraft({ username: '', displayName: '', password: '', role: 'member' });
+    setCreateDraft({ username: '', displayName: '', password: '', role: 'member', deptId: '' });
     setCreateOpen(true);
   }
 
@@ -256,6 +322,25 @@ export default function AccountsPage({
       width: 120,
       render: (row) => <AccountRoleBadge role={row.role} />,
     },
+    {
+      key: 'dept',
+      title: '部门',
+      width: 140,
+      render: (row) => (
+        <select
+          value={depts.find((d) => d.name === userDept[row.id])?.id || ''}
+          onChange={(e) => void assignDept(row.id, e.target.value)}
+          className="max-w-[130px] rounded-[8px] border-[0.5px] border-[#e3e7f1] bg-white px-[8px] py-[4px] text-[12px] text-[#464c5e] outline-none"
+        >
+          <option value="">未分配</option>
+          {depts.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+      ),
+    },
     { key: 'created', title: '创建时间', width: 180, render: (row) => formatDateTime(row.created_at) },
     { key: 'updated', title: '最近更新', width: 180, render: (row) => formatDateTime(row.updated_at) },
     {
@@ -293,8 +378,55 @@ export default function AccountsPage({
 
   return (
     <div className="min-h-full box-border px-[48px] pt-[32px] pb-[43px] max-[900px]:px-[16px]" aria-busy={loading}>
-      <AppHeader onLogout={onLogout} userName={currentUser?.username} title="账号管理" />
+      <AppHeader onLogout={onLogout} userName={currentUser?.username} title="组织管理" />
       {currentUser?.source === 'base_identity' && <p className="mt-4 text-sm text-muted-foreground">企业账号由统一权限中心管理，此处展示当前账号目录</p>}
+
+      {/* itc 二次开发：部门区（FR-266）——与人员管理合并为「组织管理」 */}
+      <div className="mt-[20px] flex flex-col gap-[12px] rounded-[16px] border-[0.5px] border-[#e3e7f1] bg-white p-[18px]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-[6px] text-[14px] font-semibold text-[#18181a]">
+            <IconOrg className="size-[15px] text-[#757f9c]" />
+            部门
+            <span className="text-[12px] font-normal text-[#9aa0ab]">（FR-266 · 点部门看统计）</span>
+          </div>
+          {currentUser?.source !== 'base_identity' && (
+            <UIButton
+              onClick={() => setDeptOpen(true)}
+              className="h-[30px] gap-[4px] rounded-[10px] border-[0.5px] border-[#e3e7f1] bg-white px-[14px] text-[12px] font-normal text-[#464c5e] hover:bg-[#f6f6f6]"
+            >
+              <IconAdd className="size-[13px]" /> 新增部门
+            </UIButton>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-[10px]">
+          {depts.length === 0 ? (
+            <span className="text-[12px] text-[#9aa0ab]">暂无部门。新增后可在下方人员表给成员分配部门。</span>
+          ) : (
+            depts.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => void viewDeptStats(d)}
+                className={`flex items-center gap-[8px] rounded-[10px] border px-[12px] py-[6px] text-[13px] transition-colors ${
+                  deptStats?.name === d.name ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]' : 'border-[#e3e7f1] text-[#464c5e] hover:bg-[#fafbfc]'
+                }`}
+              >
+                <span>{d.name}</span>
+                <span className="text-[11px] text-[#9aa0ab]">{d.memberCount} 人</span>
+              </button>
+            ))
+          )}
+        </div>
+        {deptStats && (
+          <div className="flex flex-wrap items-center gap-[18px] rounded-[10px] bg-[#f8f9fb] px-[14px] py-[8px] text-[12px] text-[#464c5e]">
+            <span className="font-semibold text-[#18181a]">{deptStats.name}</span>
+            <span>成员 {deptStats.memberCount}</span>
+            <span>调用 {deptStats.calls}</span>
+            <span>Token {deptStats.totalTokens.toLocaleString()}</span>
+            <span>成本 ¥{deptStats.cost.toFixed(4)}</span>
+          </div>
+        )}
+      </div>
 
       <div className="mt-[20px] mb-[16px] flex items-center justify-end gap-[12px]">
         <UIButton
@@ -422,6 +554,33 @@ export default function AccountsPage({
         description="删除后该账号无法登录，但其创建的数字员工仍然保留。"
         onConfirm={() => void confirmDelete()}
       />
+
+      {/* itc 二次开发：新增部门弹窗（FR-266） */}
+      <Dialog open={deptOpen} onOpenChange={setDeptOpen}>
+        <DialogContent
+          aria-describedby={undefined}
+          className="flex w-[calc(100%-2rem)] flex-col gap-[16px] overflow-hidden rounded-[14px] px-[20px] py-[16px] sm:max-w-[400px]"
+        >
+          <div className="flex items-center gap-[6px] px-[12px] text-[#757f9c]">
+            <IconOrg className="size-[14px] shrink-0" />
+            <DialogTitle className="text-[14px] font-normal leading-none text-[#757f9c]">新增部门</DialogTitle>
+          </div>
+          <div className="px-[12px]">
+            <label className="flex flex-col gap-[6px]">
+              <span className="text-[12px] font-medium text-[#464c5e]">部门名称</span>
+              <Input value={deptName} placeholder="例如 企划部" onChange={(e) => setDeptName(e.target.value)} />
+            </label>
+          </div>
+          <div className="flex items-center justify-end gap-[8px] px-[12px]">
+            <UIButton variant="outline" onClick={() => setDeptOpen(false)} className="h-[32px] rounded-[10px] border-[#e3e7f1] bg-white px-[12px] text-[14px] text-[#464c5e] hover:bg-[#f6f6f6]">
+              取消
+            </UIButton>
+            <UIButton onClick={() => void addDept()} className="h-[32px] rounded-[10px] bg-[#18181a] px-[12px] text-[14px] text-white hover:bg-[#303030]">
+              保存
+            </UIButton>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

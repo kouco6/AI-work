@@ -47,7 +47,6 @@ import IconBriefcase from '../assets/icons/cap-briefcase.svg?react';
 import IconChat from '../assets/icons/action-chat.svg?react';
 import IconToggle from '../assets/icons/action-toggle.svg?react';
 import IconHeaderCollapse from '../assets/icons/header-collapse.svg?react';
-import IconAccounts from '../assets/icons/sys-accounts.svg?react';
 import IconModels from '../assets/icons/sys-models.svg?react';
 import IconSettings from '../assets/icons/action-toggle.svg?react';
 import IconAdmin from '../assets/icons/nav-agents.svg?react';
@@ -100,12 +99,11 @@ const CAPABILITY_NAV: NavItem[] = [
 
 // 系统导航（仅管理员）——照原型 SYSTEM_NAV；平台级配置收敛进「管理后台」二级导航
 const SYSTEM_NAV: NavItem[] = [
-  { route: EnterpriseRoute.Accounts, label: '账号管理', Icon: IconAccounts },
+  // itc 二次开发：账号管理 + 部门权限 合并为「组织管理」（FR-266）
+  { route: EnterpriseRoute.Accounts, label: '组织管理', Icon: IconOrg },
   { route: EnterpriseRoute.Models, label: '模型配置', Icon: IconModels },
   // itc 二次开发：绩效考核 / KPI（仅管理员）
   { route: EnterpriseRoute.Kpi, label: '绩效考核', Icon: IconKpi },
-  // itc 二次开发：部门权限管理（仅管理员）
-  { route: EnterpriseRoute.Depts, label: '部门权限', Icon: IconOrg },
   { route: EnterpriseRoute.RuntimeSettings, label: '运行设置', Icon: IconSettings },
   { route: EnterpriseRoute.Admin, label: '管理后台', Icon: IconAdmin },
 ];

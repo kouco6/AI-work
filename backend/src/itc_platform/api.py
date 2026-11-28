@@ -306,6 +306,35 @@ def escalate_task(
 
 # ── 部门管理（FR-232/266）────────────────────────────────────
 
+@router.get("/depts/user-map")
+def dept_user_map(
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """用户 id → 部门名 映射（供人员列表展示部门列）。"""
+    _ensure_itc_schema()
+    from itc_platform.depts import service as depts
+
+    return depts.user_dept_map(tenant_id)
+
+
+@router.post("/depts/assign-user")
+def assign_user_dept(
+    body: dict = Body(...),
+    tenant_id: str = Query(...),
+    current_user: User = Depends(require_current_tenant),
+) -> dict:
+    """把某用户归到某部门（仅管理员）。"""
+    _require_admin(current_user)
+    _ensure_itc_schema()
+    from itc_platform.depts import service as depts
+
+    return {"ok": depts.set_user_dept(
+        tenant_id, str(body.get("user_id") or ""),
+        int(body["dept_id"]) if body.get("dept_id") is not None else None,
+    )}
+
+
 @router.get("/depts")
 def list_depts(
     tenant_id: str = Query(...),

@@ -77,6 +77,29 @@ def dept_of_user(tenant_id: str, user_id: str, *, engine: Optional[Engine] = Non
     return m.dept_id if m else None
 
 
+def set_user_dept(tenant_id: str, user_id: str, dept_id: Optional[int], *, engine: Optional[Engine] = None) -> int:
+    """把某用户归到某部门（None = 移出所有部门）。一个用户只属一个部门。"""
+    eng = engine or get_engine()
+    ensure_itc_schema(eng)
+    with Session(eng) as s:
+        for old in s.exec(select(DeptMember).where(DeptMember.tenant_id == tenant_id, DeptMember.user_id == user_id)).all():
+            s.delete(old)
+        if dept_id is not None:
+            s.add(DeptMember(tenant_id=tenant_id, dept_id=dept_id, user_id=user_id))
+        s.commit()
+        return 1
+
+
+def user_dept_map(tenant_id: str, *, engine: Optional[Engine] = None) -> dict[str, str]:
+    """用户 id → 部门名（供人员列表展示）。"""
+    eng = engine or get_engine()
+    ensure_itc_schema(eng)
+    with Session(eng) as s:
+        depts = {d.id: d.name for d in s.exec(select(Dept).where(Dept.tenant_id == tenant_id)).all()}
+        members = s.exec(select(DeptMember).where(DeptMember.tenant_id == tenant_id)).all()
+    return {m.user_id: depts.get(m.dept_id, "") for m in members}
+
+
 def is_dept_leader(tenant_id: str, dept_id: int, user_id: str, *, engine: Optional[Engine] = None) -> bool:
     eng = engine or get_engine()
     ensure_itc_schema(eng)
